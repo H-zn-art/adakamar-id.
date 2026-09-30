@@ -34,6 +34,11 @@ yarn-error.log*
 scratch/
 .system_generated/
 *.tsbuildinfo
+*.pptx
+generate_pptx.py
+extract_prd.py
+prd_text.txt
+prd_role_text.txt
 
 # OS Metadata & IDE
 .DS_Store

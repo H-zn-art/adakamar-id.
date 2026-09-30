@@ -75,7 +75,6 @@ Proyek ini dibangun menggunakan arsitektur **Monorepo** yang memisahkan sisi *Fr
 │
 ├── dev.js                     # ⚡ Skrip Runner (Menjalankan Frontend & Backend Sekaligus)
 ├── package.json               # Konfigurasi Monorepo Root
-├── Presentasi_Project_adakamar_id.pptx # 📊 File Slide Presentasi Proyek
 ├── PRD adakamar.id.pdf        # Dokumen Spesifikasi Produk (PRD Utama)
 └── PRD Role & User Flow adakamar.id.pdf # Dokumen Alur Pengguna & Role
 ```
@@ -151,12 +150,11 @@ Halaman login dapat diakses di: [http://localhost:3000/masuk](http://localhost:3
 
 ---
 
-## 📑 Berkas Bukti & Presentasi Tugas
+## 📑 Berkas Bukti & Dokumen Tugas
 Dalam repositori ini disertakan berkas pendukung resmi untuk evaluasi:
-1. **`Presentasi_Project_adakamar_id.pptx`**: Slide presentasi lengkap (10 slide) yang memuat latar belakang, target pengguna, fitur utama, arsitektur teknis, dan dokumentasi demo.
-2. **`PRD adakamar.id.pdf`**: *Product Requirement Document* kurasi homestay autentik.
-3. **`PRD Role & User Flow adakamar.id.pdf`**: *Role, permission matrix*, dan diagram alur pengguna.
-4. **`DESIGN.md adakamar.id.md`**: Panduan desain antarmuka, filosofi warna, dan tipografi budaya Jawa modern.
+1. **`PRD adakamar.id.pdf`**: *Product Requirement Document* kurasi homestay autentik.
+2. **`PRD Role & User Flow adakamar.id.pdf`**: *Role, permission matrix*, dan diagram alur pengguna.
+3. **`DESIGN.md adakamar.id.md`**: Panduan desain antarmuka, filosofi warna, dan tipografi budaya Jawa modern.
 
 ---
 
