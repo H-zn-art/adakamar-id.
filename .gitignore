@@ -1,0 +1,43 @@
+# Dependencies (Root & Subprojects)
+node_modules/
+*/node_modules/
+.pnp
+.pnp.*
+
+# Build Outputs & Bundles
+.next/
+*/.next/
+dist/
+*/dist/
+build/
+*/build/
+out/
+*/out/
+
+# Environment Variables
+.env
+.env.*
+*.env
+*/.env
+*/.env.*
+!.env.example
+!*/.env.example
+
+# Logs & Debugging
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# Temporary and Scratch Folders
+scratch/
+.system_generated/
+*.tsbuildinfo
+
+# OS Metadata & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,28 @@
+{
+  "name": "adakamar-workspace",
+  "version": "1.0.0",
+  "description": "adakamar.id — Yogyakarta Homestay Platform (Frontend Next.js + Backend NestJS + MySQL)",
+  "private": true,
+  "scripts": {
+    "dev": "node dev.js",
+    "dev:frontend": "npm --prefix adakamar-id run dev",
+    "dev:backend": "npm --prefix adakamar-backend run start:dev",
+    "build:frontend": "npm --prefix adakamar-id run build",
+    "build:backend": "npm --prefix adakamar-backend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "prisma:push": "npm --prefix adakamar-backend run prisma:push",
+    "prisma:seed": "npm --prefix adakamar-backend run prisma:seed",
+    "prisma:studio": "npx --prefix adakamar-backend prisma studio"
+  },
+  "keywords": [
+    "adakamar",
+    "homestay",
+    "yogyakarta",
+    "nextjs",
+    "nestjs",
+    "prisma",
+    "mysql"
+  ],
+  "author": "adakamar.id",
+  "license": "UNLICENSED"
+}

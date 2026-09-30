@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PENULIS
+}
+
+enum PropertyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ArticleStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REVISION_REQUIRED
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      UserRole  @default(PENULIS)
+  avatarUrl String?   @db.Text
+  bio       String?   @db.Text
+  phone     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  articles  Article[]
+
+  @@map("users")
+}
+
+model Property {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  description    String          @db.Text
+  price          Int
+  originalPrice  Int?
+  address        String
+  locationId     String?
+  locationArea   LocationArea?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  categoryId     String?
+  category       PropertyCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  capacity       Int             @default(2)
+  bedroomCount   Int             @default(1)
+  bathroomCount  Int             @default(1)
+  latitude       Float?
+  longitude      Float?
+  whatsappNumber String
+  rules          String?         @db.Text
+  status         PropertyStatus  @default(ACTIVE)
+  isFeatured     Boolean         @default(false)
+  isPopular      Boolean         @default(false)
+  rating         Float           @default(4.9)
+  reviewCount    Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  images         PropertyImage[]
+  facilities     PropertyFacility[]
+  inquiries      Inquiry[]
+  reviews        Review[]
+  promos         PromoProperty[]
+  articles       ArticleProperty[]
+
+  @@map("properties")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  guestName  String
+  rating     Int      @default(5)
+  comment    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@map("reviews")
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  imageUrl   String   @db.Text
+  caption    String?
+  isCover    Boolean  @default(false)
+  sortOrder  Int      @default(0)
+
+  @@map("property_images")
+}
+
+model Facility {
+  id          String             @id @default(cuid())
+  name        String
+  category    String             @default("Umum")
+  icon        String             @default("check_circle")
+  description String?            @db.Text
+  properties  PropertyFacility[]
+
+  @@map("facilities")
+}
+
+model PropertyFacility {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, facilityId])
+  @@map("property_facilities")
+}
+
+model LocationArea {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  district    String?
+  description String?    @db.Text
+  imageUrl    String?    @db.Text
+  latitude    Float?
+  longitude   Float?
+  properties  Property[]
+
+  @@map("location_areas")
+}
+
+model PropertyCategory {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  icon        String     @default("cottage")
+  description String?    @db.Text
+  properties  Property[]
+
+  @@map("property_categories")
+}
+
+model Article {
+  id             String           @id @default(cuid())
+  title          String
+  slug           String           @unique
+  content        String           @db.LongText
+  excerpt        String?          @db.Text
+  thumbnailUrl   String           @db.Text
+  status         ArticleStatus    @default(DRAFT)
+  revisionNotes  String?          @db.Text
+  views          Int              @default(0)
+  readingTime    String           @default("5 mnt baca")
+  seoTitle       String?
+  metaDescription String?         @db.Text
+  publishedAt    DateTime?
+  authorId       String
+  author         User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       ArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags           ArticleTagPivot[]
+  properties     ArticleProperty[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("articles")
+}
+
+model ArticleCategory {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  icon           String    @default("explore")
+  colorAccent    String    @default("#9f3c16")
+  description    String?   @db.Text
+  showInNav      Boolean   @default(true)
+  showInFeatured Boolean   @default(true)
+  articles       Article[]
+
+  @@map("article_categories")
+}
+
+model ArticleTag {
+  id             String            @id @default(cuid())
+  name           String
+  slug           String            @unique
+  parentCategory String            @default("Arsitektur & Budaya Jawa")
+  colorAccent    String            @default("#9f3c16")
+  isTrending     Boolean           @default(false)
+  articles       ArticleTagPivot[]
+
+  @@map("article_tags")
+}
+
+model ArticleTagPivot {
+  id        String     @id @default(cuid())
+  articleId String
+  article   Article    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tagId     String
+  tag       ArticleTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, tagId])
+  @@map("article_tag_pivots")
+}
+
+model Promo {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  title           String
+  description     String?  @db.Text
+  discountPercent Int?
+  discountAmount  Int?
+  minTransaction  Int?
+  quota           Int      @default(100)
+  usedCount       Int      @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean  @default(true)
+  terms           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  properties      PromoProperty[]
+
+  @@map("promos")
+}
+
+model PromoProperty {
+  id         String   @id @default(cuid())
+  promoId    String
+  promo      Promo    @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([promoId, propertyId])
+  @@map("promo_properties")
+}
+
+model ArticleProperty {
+  id         String   @id @default(cuid())
+  articleId  String
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+
+  @@unique([articleId, propertyId])
+  @@map("article_properties")
+}
+
+model Inquiry {
+  id           String        @id @default(cuid())
+  propertyId   String
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  guestName    String
+  guestPhone   String
+  guestEmail   String?
+  checkInDate  DateTime?
+  checkOutDate DateTime?
+  guestCount   Int           @default(2)
+  notes        String?       @db.Text
+  status       InquiryStatus @default(NEW)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("inquiries")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}

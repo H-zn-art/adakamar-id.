@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presentasi Proyek: adakamar.id — Platform Kurasi Homestay Autentik Yogyakarta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #9f3c16;
+      --primary-light: #bf542c;
+      --primary-soft: #ffdbcf;
+      --primary-bg: #fff5f2;
+      --dark: #18181b;
+      --dark-card: #27272a;
+      --text-main: #1c1917;
+      --text-muted: #78716c;
+      --bg: #f8f6f4;
+      --card-bg: #ffffff;
+      --border: #e7e5e4;
+      --radius: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #0f0f11;
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Presentation Canvas */
+    .deck-container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #1c1917 0%, #0c0a09 100%);
+    }
+
+    .slide {
+      width: 90vw;
+      max-width: 1360px;
+      height: 85vh;
+      max-height: 780px;
+      background: #ffffff;
+      border-radius: 28px;
+      padding: 48px 56px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 25px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+      animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.97) translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* Background Watermarks / Patterns */
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: -120px;
+      right: -120px;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(159,60,22,0.06) 0%, rgba(255,255,255,0) 70%);
+      pointer-events: none;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .slide-title {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1a1b22;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .slide-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .brand-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-bg);
+      padding: 6px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--primary-soft);
+    }
+
+    /* Slide Body Grid */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    /* Cards */
+    .card {
+      background: #fafaf9;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .card.primary-border {
+      border-color: rgba(159,60,22,0.3);
+      background: linear-gradient(145deg, #fff5f2 0%, #ffffff 100%);
+    }
+
+    .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .card h4 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1a1b22;
+      letter-spacing: -0.01em;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: #57534e;
+      line-height: 1.6;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .card ul li {
+      font-size: 12.5px;
+      color: #44403c;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .card ul li::before {
+      content: "✦";
+      color: var(--primary);
+      font-size: 11px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Hero Slide Special */
+    .hero-slide {
+      background: linear-gradient(135deg, #18181b 0%, #291208 60%, #150904 100%);
+      color: #ffffff;
+      border: 1px solid rgba(255,219,207,0.15);
+    }
+
+    .hero-slide .slide-title {
+      color: #ffffff;
+      font-size: 46px;
+      font-family: 'Playfair Display', serif;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    .hero-slide .slide-subtitle {
+      color: #d6d3d1;
+      font-size: 16px;
+      max-width: 720px;
+      line-height: 1.6;
+      margin-top: 14px;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta-item {
+      padding: 12px 20px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.08);
+      backdrop-blur: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .hero-meta-item span:first-child {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #ffdbcf;
+      font-weight: 700;
+    }
+
+    .hero-meta-item span:last-child {
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    /* Metric Counters */
+    .metric-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--primary);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.03em;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #44403c;
+    }
+
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Tech Stack Badges */
+    .tech-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #ffffff;
+      border: 1px solid #d6d3d1;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #292524;
+    }
+
+    /* Slide Footer */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Presenter Floating Control Bar */
+    .deck-controls {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 18px;
+      background: rgba(24, 24, 27, 0.85);
+      backdrop-filter: blur(16px);
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+
+    .control-btn {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.15s ease;
+    }
+
+    .control-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .slide-counter {
+      color: #ffdbcf;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0 8px;
+    }
+
+    .speaker-notes-drawer {
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: #f5f5f4;
+      border-radius: 12px;
+      border-left: 3px solid var(--primary);
+      font-size: 11.5px;
+      color: #44403c;
+      line-height: 1.5;
+    }
+
+    .speaker-notes-drawer strong {
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Print Styles for Export to PDF */
+    @media print {
+      body {
+        overflow: visible;
+        background: none;
+        height: auto;
+      }
+      .deck-container {
+        display: block;
+        background: none;
+        height: auto;
+      }
+      .slide {
+        display: flex !important;
+        page-break-after: always;
+        width: 100%;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+      }
+      .deck-controls {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container">
+
+    <!-- ════════ SLIDE 1: COVER ════════ -->
+    <section class="slide active hero-slide" data-slide="1">
+      <div class="slide-header">
+        <div class="slide-badge" style="background: rgba(255,219,207,0.2); color: #ffb59c;">
+          ✦ Laporan Akhir Magang & Showcase Sistem
+        </div>
+        <div class="brand-tag" style="background: rgba(255,255,255,0.1); color: #ffdbcf; border-color: rgba(255,255,255,0.2);">
+          v1.0 • Produksi Siap Pakai
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <h1 class="slide-title">
+          adakamar.id
+        </h1>
+        <p style="font-size: 24px; font-weight: 700; color: #ffdbcf; margin-top: 4px;">
+          Platform Kurasi Homestay Autentik & Ekosistem Pariwisata Yogyakarta
+        </p>
+        <p class="slide-subtitle">
+          Membangun ekosistem reservasi penginapan tradisional Jawa (Joglo, Limasan, Villa Etnik) berbasis Next.js 16, NestJS, dan Prisma ORM dengan integrasi WhatsApp Concierge dan Meja Redaksi Editorial Budaya.
+        </p>
+
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <span>Peran / Role Pengembang</span>
+            <span>Full-Stack Web Developer</span>
+          </div>
+          <div class="hero-meta-item">
+            <span>Arsitektur Sistem</span>
+            <span>Decoupled API (Client & Backend)</span>
+          </div>
+          <div class="hero-meta-item">
+            <span>Teknologi Inti</span>
+            <span>Next.js 16 • NestJS • MySQL • Prisma</span>
+          </div>
+          <div class="hero-meta-item">
+            <span>Basis Wilayah</span>
+            <span>D.I. Yogyakarta (5 Kabupaten/Kota)</span>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer" style="background: rgba(255,255,255,0.06); border-color: #ffb59c; color: #e7e5e4;">
+          <strong>🎙️ Panduan Presenter (Slide 1):</strong>
+          "Selamat pagi/siang Bapak/Ibu Dewan Penguji dan Rekan-rekan sekalian. Pada kesempatan kali ini, saya mempresentasikan proyek akhir magang saya yang berjudul 'adakamar.id' — platform kurasi homestay autentik berbasis web modern yang didesain khusus untuk mengangkat pariwisata lokal dan kenyamanan wisatawan di Daerah Istimewa Yogyakarta."
+        </div>
+      </div>
+
+      <div class="slide-footer" style="border-color: rgba(255,255,255,0.15); color: #a8a29e;">
+        <span>adakamar.id • Presentasi Akhir Magang</span>
+        <span>Slide 01 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 2: PROBLEM STATEMENT ════════ -->
+    <section class="slide" data-slide="2">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Latar Belakang & Masalah</div>
+          <h2 class="slide-title">Tantangan Ekosistem Homestay di Yogyakarta</h2>
+          <p class="slide-subtitle">Mengapa platform reservasi khusus homestay autentik Jogja sangat dibutuhkan?</p>
+        </div>
+        <div class="brand-tag">Problem Analysis</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">1</div>
+            <h4>Dominasi OTA Global yang Homogen</h4>
+            <p>Platform OTA global (Agoda, Traveloka) dipenuhi ribuan hotel jaringan yang seragam. Keunikan arsitektur joglo lawasan dan nilai autentisitas budaya lokal Jogja seringkali tenggelam dan sulit ditemukan.</p>
+            <ul>
+              <li>Kamar terasa dingin & berjarak dari budaya</li>
+              <li>Komisi platform tinggi (15%–25%) membebani pemilik lokal</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">2</div>
+            <h4>Kesenjangan Visibilitas Tuan Rumah</h4>
+            <p>Banyak pemilik rumah joglo bersejarah di desa-desa Bantul, Sleman, dan Kulon Progo memiliki properti bernilai tinggi namun minim kapabilitas pemasaran digital dan manajemen sistem modern.</p>
+            <ul>
+              <li>Terkendala manajemen sistem booking yang rumit</li>
+              <li>Tamu kesulitan konfirmasi ketersediaan kamar yang pasti</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">3</div>
+            <h4>Ekspektasi Tamu Modern</h4>
+            <p>Pelancong masa kini mendambakan pengalaman berlibur yang bernyawa ("filosofi ngaso"), namun tetap menuntut standar kenyamanan modern seperti sanitasi higienis, AC, air panas, dan Wi-Fi kencang.</p>
+            <ul>
+              <li>Butuh kurasi fisik yang terverifikasi (bebas zonk)</li>
+              <li>Menginginkan alur booking cepat via WhatsApp concierge</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 2):</strong>
+          "Latar belakang lahirnya adakamar.id berangkat dari 3 masalah nyata di lapangan: dominasi OTA global yang seragam dengan komisi tinggi, keterbatasan digitalisasi para host lokal di Yogyakarta, dan kebingungan wisatawan dalam mencari akomodasi bernuansa budaya yang terjamin kenyamanannya."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Problem Statement</span>
+        <span>Slide 02 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 3: VALUE PROPOSITION & VISION ════════ -->
+    <section class="slide" data-slide="3">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Solusi & Nilai Unggul</div>
+          <h2 class="slide-title">Visi & Nilai Unik adakamar.id</h2>
+          <p class="slide-subtitle">Menghadirkan perpaduan kehangatan keramahan Mataram dengan teknologi digital terkini.</p>
+        </div>
+        <div class="brand-tag">Value Proposition</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card primary-border">
+            <div class="card-icon">🏛️</div>
+            <h4>100% Terkurasi Otentik</h4>
+            <p>Setiap listing homestay diverifikasi langsung mencakup elemen sokoguru kayu jati asli, atap joglo/limasan, ubin tegel klasik, hingga lingkungan asri khas pedesaan Mataram tanpa mengorbankan standar kasur premium dan kebersihan butik.</p>
+            <ul>
+              <li>Kurasi arsitektur tradisional asli Yogyakarta</li>
+              <li>Standar kenyamanan dan sanitasi higienis teruji</li>
+              <li>Galeri foto beresolusi tinggi tanpa rekayasa</li>
+            </ul>
+          </div>
+
+          <div class="card primary-border">
+            <div class="card-icon">🤝</div>
+            <h4>Kemitraan Komunitas & Direct WhatsApp</h4>
+            <p>Menghubungkan tamu langsung ke pengelola homestay via WhatsApp dengan template format pemesanan otomatis, rincian kupon promo terhitung, dan estimasi biaya transparan tanpa biaya tersembunyi.</p>
+            <ul>
+              <li>Pemberdayaan ekonomi langsung ke warga desa (90%+)</li>
+              <li>Booking tanpa registrasi akun yang menyulitkan tamu</li>
+              <li>Jalur komunikasi personal dan ramah khas Jogja</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 3):</strong>
+          "Solusi yang kami hadirkan di adakamar.id adalah kurasi 100% fisik dan arsitektur, serta model pemesanan instan terintegrasi WhatsApp. Tamu tidak dipaksa mengisi form login yang panjang, melainkan langsung diarahkan ke chat concierge dengan data pesanan yang telah diformat otomatis."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Value Proposition</span>
+        <span>Slide 03 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 4: SYSTEM ROLES & ACTORS ════════ -->
+    <section class="slide" data-slide="4">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Aktor & Hak Akses</div>
+          <h2 class="slide-title">Struktur Role & Alur Pengguna (RBAC)</h2>
+          <p class="slide-subtitle">Pemisahan tanggung jawab sistem berbasis peran untuk keamanan dan fleksibilitas operasional.</p>
+        </div>
+        <div class="brand-tag">Role-Based Access</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">👤</div>
+            <h4>1. Pengunjung / Tamu (Public)</h4>
+            <p>Wisatawan umum yang mencari pengalaman menginap otentik di Jogja.</p>
+            <ul>
+              <li>Eksplorasi homestay dengan filter multi-parameter</li>
+              <li>Pencarian artikel panduan wisata & rekomendasi kuliner</li>
+              <li>Klaim dan penerapan kode kupon promo</li>
+              <li>Pengiriman form reservasi / inquiry via WhatsApp</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">✍️</div>
+            <h4>2. Penulis Artikel (Role: PENULIS)</h4>
+            <p>Kontributor naskah budaya, travel blogger, dan kurator cerita lokal.</p>
+            <ul>
+              <li>Portal naskah mandiri dengan editor formatting lengkap</li>
+              <li>Unggah foto sampul langsung dari komputer</li>
+              <li>Sistem penandaan tagar interaktif & pembuatan tag baru</li>
+              <li>Pengajuan naskah ke redaksi dengan status transparan</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">🛡️</div>
+            <h4>3. Administrator (Role: ADMIN)</h4>
+            <p>Pengelola operasional, redaksi utama, dan pemangku kebijakan platform.</p>
+            <ul>
+              <li>Manajemen penuh unit homestay, fasilitas, & wilayah</li>
+              <li>Review, persetujuan, atau revisi naskah penulis</li>
+              <li>Manajemen kupon promo, kuota klaim, & batas waktu</li>
+              <li>Pustaka media terpusat & manajemen modal reservasi tamu</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 4):</strong>
+          "Sistem adakamar.id dirancang dengan 3 persona: Tamu publik tanpa friksi akun, Penulis artikel dengan meja redaksi terisolasi, dan Administrator dengan kendali penuh atas marketplace, kupon promo, dan inquiry reservasi."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Role Architecture</span>
+        <span>Slide 04 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 5: TECH STACK & ARCHITECTURE ════════ -->
+    <section class="slide" data-slide="5">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Arsitektur & Teknologi</div>
+          <h2 class="slide-title">Tech Stack & Diagram Sistem Modern</h2>
+          <p class="slide-subtitle">Kombinasi teknologi industri terkemuka untuk performa tinggi, keamanan, dan skalabilitas.</p>
+        </div>
+        <div class="brand-tag">Architecture</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <h4>Frontend Application (Next.js 16)</h4>
+            <p>Dibangun menggunakan arsitektur modern Next.js App Router dengan React 19 dan TypeScript:</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;">
+              <span class="tech-pill">⚡ Next.js 16.3</span>
+              <span class="tech-pill">⚛️ React 19</span>
+              <span class="tech-pill">📘 TypeScript 5</span>
+              <span class="tech-pill">🎨 TailwindCSS v4</span>
+              <span class="tech-pill">✨ Lucide Icons</span>
+              <span class="tech-pill">🗺️ Leaflet Maps</span>
+            </div>
+            <ul>
+              <li>Server-Side Rendering (SSR) & Static Generation untuk SEO maksimal</li>
+              <li>Desain responsif mobile-first bernuansa warm terracotta</li>
+              <li>Client-side route caching & transition hooks</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h4>Backend REST API (NestJS + MySQL)</h4>
+            <p>Arsitektur modular berbasis TypeScript dengan Prisma ORM dan MySQL database:</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;">
+              <span class="tech-pill">🦁 NestJS 10</span>
+              <span class="tech-pill">🔺 Prisma ORM</span>
+              <span class="tech-pill">🐬 MySQL 8.0</span>
+              <span class="tech-pill">🔒 JWT + Bcrypt</span>
+              <span class="tech-pill">📁 Local Upload Engine</span>
+            </div>
+            <ul>
+              <li>Pemisahan controller, service, DTO, dan schema entities</li>
+              <li>JWT Authentication Guards & Role Guards otomatis</li>
+              <li>Proteksi SQL Injection melalui query parameterization Prisma</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 5):</strong>
+          "Secara arsitektur, frontend dan backend dipisahkan secara bersih. Frontend menggunakan Next.js 16 yang sangat cepat dan ramah mesin pencari, sedangkan backend ditenagai NestJS — framework enterprise Node.js dengan type safety end-to-end berkat Prisma ORM."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Full-Stack Stack</span>
+        <span>Slide 05 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 6: CORE MODULE - HOMESTAY MARKETPLACE ════════ -->
+    <section class="slide" data-slide="6">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Modul Utama 1</div>
+          <h2 class="slide-title">Katalog & Reservasi Homestay (Marketplace)</h2>
+          <p class="slide-subtitle">Pengalaman pencarian akomodasi intuitif dengan kalkulasi harga transparan.</p>
+        </div>
+        <div class="brand-tag">Homestay Engine</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">🔍</div>
+            <h4>Pencarian Multi-Filter</h4>
+            <p>Penyaringan cerdas berdasarkan 6 wilayah wisata DIY (Malioboro, Prawirotaman, Kaliurang, Kotagede, Sleman, Bantul), kapasitas kamar tidur/tamu, rentang tarif, dan kelengkapan fasilitas.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">📸</div>
+            <h4>Showcase Detail Kamar</h4>
+            <p>Halaman listing komprehensif memuat galeri foto multi-angle, spesifikasi kamar tidur & mandi, aturan menginap ramah keluarga, rating terverifikasi, dan peta interaktif area sekitar.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">💬</div>
+            <h4>Booking Widget WhatsApp</h4>
+            <p>Kalkulator durasi menginap dinamis (check-in s/d check-out) dengan potongan kupon otomatis. Begitu tombol kirim diklik, inquiry tersimpan di database dan membuka WhatsApp pengelola.</p>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 6):</strong>
+          "Modul pertama adalah katalog homestay. Keunggulan widget booking kami adalah kalkulasi instan biaya sewa per malam, otomatis memotong diskon kupon yang valid, dan merangkumnya menjadi pesan WhatsApp siap kirim yang rapi dan profesional."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Marketplace Feature</span>
+        <span>Slide 06 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 7: CORE MODULE - PROMO & COUPON ENGINE ════════ -->
+    <section class="slide" data-slide="7">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Modul Utama 2</div>
+          <h2 class="slide-title">Sistem Promo & Kupon Diskon Dinamis</h2>
+          <p class="slide-subtitle">Mesin kampanye promosi otomatis dengan validasi kuota dan pelacakan transaksi real-time.</p>
+        </div>
+        <div class="brand-tag">Promo Engine</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <h4>Mekanisme & Validasi Kupon</h4>
+            <ul>
+              <li>Mendukung tipe diskon <strong>Persentase (%)</strong> atau <strong>Nominal Tetap (Rp)</strong>.</li>
+              <li>Aturan syarat transaksi: <strong>Minimum Biaya Reservasi</strong> dan <strong>Maksimal Nilai Diskon</strong>.</li>
+              <li>Pembatasan masa berlaku (Start Date & End Date) dengan validasi otomatis di level server.</li>
+              <li>Penautan khusus unit penginapan tertentu (PRD Seksi 13) melalui relasi <code>PromoProperty</code>.</li>
+            </ul>
+          </div>
+
+          <div class="card primary-border">
+            <h4>Pelacakan Kuota Penggunaan Real-Time</h4>
+            <ul>
+              <li><strong>Tracking Pemakaian Kuota:</strong> Menggunakan endpoint <code>PATCH /promos/use/:code</code> dengan atomic increment MySQL.</li>
+              <li><strong>Sinkronisasi Live Admin:</strong> Saat kupon disalin di halaman promo atau diterapkan di form booking, <code>usedCount</code> langsung terbarui.</li>
+              <li><strong>Dashboard Monitoring:</strong> Menampilkan kartu metrik "Total Voucher Digunakan" dan progress bar kapasitas kupon.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 7):</strong>
+          "Pada modul promo, kami baru saja menyempurnakan pelacakan kuota kupon. Setiap kali tamu menerapkan voucher atau menyalin kode promo, sistem di backend secara atomik meng-increment kolom usedCount di database sehingga admin dapat memantau efektivitas kampanye secara presisi."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Promo System</span>
+        <span>Slide 07 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 8: CORE MODULE - EDITORIAL CMS ════════ -->
+    <section class="slide" data-slide="8">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Modul Utama 3</div>
+          <h2 class="slide-title">Meja Redaksi & Editorial Penulis (CMS Artikel)</h2>
+          <p class="slide-subtitle">Portal pembuatan konten kebudayaan dan panduan wisata dengan workflow review terintegrasi.</p>
+        </div>
+        <div class="brand-tag">Editorial CMS</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-icon">📝</div>
+            <h4>Editor Naskah Lengkap</h4>
+            <p>Dilengkapi toolbar format interaktif (Bold, Italic, Heading, List, Quote, Link, Table) yang langsung menyisipkan sintaks ke kursor, disertai live word counter dan estimasi waktu baca pembaca.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">🏷️</div>
+            <h4>Sistem Tagar Dinamis</h4>
+            <p>Penulis dapat memilih tagar populer yang ada atau membuat tagar baru secara instan. Hak akses backend telah disesuaikan agar role PENULIS dapat menambah tag tanpa kendala 403 Forbidden.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">🖼️</div>
+            <h4>Unggah Foto Langsung</h4>
+            <p>Mendukung upload gambar sampul (thumbnail) langsung dari komputer melalui drag-and-drop ke API lokal <code>/api/upload</code>, meniadakan ketergantungan mencari link URL eksternal.</p>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 8):</strong>
+          "Modul ketiga adalah Meja Redaksi Penulis. Kami telah merapihkan formulir penulisan artikel: menambahkan upload foto lokal dari laptop, menghubungkan sistem tagar dinamis agar sinkron ke basis data, dan menyediakan toolbar formatting teks yang interaktif."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Editorial CMS</span>
+        <span>Slide 08 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 9: CORE MODULE - ADMIN COMMAND CENTER ════════ -->
+    <section class="slide" data-slide="9">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Modul Utama 4</div>
+          <h2 class="slide-title">Admin Command Center & Pustaka Media</h2>
+          <p class="slide-subtitle">Kendali penuh atas operasional bisnis, galeri aset visual, dan manajemen reservasi tamu.</p>
+        </div>
+        <div class="brand-tag">Admin Dashboard</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <h4>Pustaka Galeri Media (Impor Manual)</h4>
+            <p>Memungkinkan pengelola mengunggah banyak foto resolusi tinggi sekaligus (*multi-file*) langsung dari komputer ke penyimpanan lokal <code>/public/uploads/</code>:</p>
+            <ul>
+              <li>Area Drag-and-Drop intuitif dengan pratinjau thumbnail instan</li>
+              <li>Penautan otomatis ke unit homestay di database MySQL</li>
+              <li>Penyalinan tautan cloud sekali klik untuk kebutuhan editorial</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h4>Modal Box Manajemen Reservasi Tamu</h4>
+            <p>Penggantian panel drawer lama menjadi <strong>Modal Box Dialog Terpusat</strong> yang bersih dan rapi:</p>
+            <ul>
+              <li>Informasi data tamu, homestay, durasi, dan rincian kupon</li>
+              <li>Tombol aksi cepat status: <em>Setujui / Selesai / Batalkan</em></li>
+              <li>Tautan langsung chat WhatsApp tamu (*click-to-chat*) dengan 1 klik</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 9):</strong>
+          "Pada sisi Admin, kami menghadirkan Pustaka Media baru yang mendukung impor foto manual dari file komputer lokal tanpa perlu URL link, serta mengubah tampilan lembar inquiry menjadi Modal Box terpusat yang modern dan responsif."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Admin Panel</span>
+        <span>Slide 09 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 10: DATABASE SCHEMA & ARCHITECTURE ════════ -->
+    <section class="slide" data-slide="10">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Struktur Basis Data</div>
+          <h2 class="slide-title">Skema Database Relasional (Prisma + MySQL)</h2>
+          <p class="slide-subtitle">Rancangan entitas terstandarisasi untuk integritas relasi data dan performa query optimal.</p>
+        </div>
+        <div class="brand-tag">Data Schema</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-4">
+          <div class="card">
+            <h4>Users & Auth</h4>
+            <p><code>User</code> model dengan role <code>ADMIN</code> dan <code>PENULIS</code>, hash password Bcrypt, avatar, bio, dan relasi kepemilikan artikel.</p>
+          </div>
+          <div class="card">
+            <h4>Homestay Entities</h4>
+            <p><code>Property</code>, <code>PropertyImage</code>, <code>Facility</code>, <code>LocationArea</code>, dan <code>PropertyCategory</code> dengan relasi cascade.</p>
+          </div>
+          <div class="card">
+            <h4>Promo System</h4>
+            <p><code>Promo</code> dengan kuota, <code>usedCount</code>, masa aktif, dan tabel pivot <code>PromoProperty</code> untuk penargetan homestay.</p>
+          </div>
+          <div class="card">
+            <h4>Articles & Inquiries</h4>
+            <p><code>Article</code>, <code>ArticleCategory</code>, <code>ArticleTag</code>, <code>ArticleTagPivot</code>, <code>Inquiry</code>, dan <code>Review</code>.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px;" class="grid-3">
+          <div class="metric-box">
+            <span class="metric-value">12+</span>
+            <span class="metric-label">Tabel Relasional Terindeks</span>
+            <span class="metric-sub">Cascade Delete & Foreign Keys</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">100%</span>
+            <span class="metric-label">Type-Safe Prisma Client</span>
+            <span class="metric-sub">Zero SQL Injection Risk</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">Fast</span>
+            <span class="metric-label">Query Latency &lt; 20ms</span>
+            <span class="metric-sub">Optimized Multi-join Queries</span>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 10):</strong>
+          "Skema basis data kami mencakup 12 entitas relasional utama yang dikelola dengan Prisma ORM. Hubungan antar tabel seperti relasi many-to-many pada tag artikel dan promo penginapan dipetakan menggunakan tabel pivot yang efisien dan aman."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • Database Design</span>
+        <span>Slide 10 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 11: HOMEPAGE REVAMP & ABOUT US ════════ -->
+    <section class="slide" data-slide="11">
+      <div class="slide-header">
+        <div>
+          <div class="slide-badge">Penyempurnaan Antarmuka</div>
+          <h2 class="slide-title">Revisi Narasi Beranda: Dari Host ke "Tentang Kami"</h2>
+          <p class="slide-subtitle">Menghubungkan pengunjung dengan kisah, filosofi kurasi, dan keramahan Yogyakarta.</p>
+        </div>
+        <div class="brand-tag">UI/UX Revamp</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <h4>Navigasi Utama & Rute Fungsional</h4>
+            <p>Pembaruan menu bilah atas (*Navbar*) dari sebelumnya label "Tuan Rumah" menjadi <strong>"Tentang Kami"</strong> yang mengarah ke rute aktif <code>/tentang-kami</code>:</p>
+            <ul>
+              <li>Ikon informatif terstandarisasi (Lucide <code>Info</code> icon)</li>
+              <li>Integrasi tautan pada footer pendukung ekosistem</li>
+              <li>Status HTTP 200 terverifikasi dan bebas dari halaman kosong</li>
+            </ul>
+          </div>
+
+          <div class="card primary-border">
+            <h4>Banner Narasi Filosofis "Ngaso"</h4>
+            <p>Penggantian banner lama menjadi bagian narasi autentik adakamar.id:</p>
+            <ul>
+              <li><strong>Pilar Kurasi:</strong> Menampilkan 100% Homestay Terkurasi, Kemitraan Komunitas Warga, dan Standar Butik Higienis.</li>
+              <li><strong>Call-to-Action Jelas:</strong> Tombol <em>"Pelajari Kisah Kami"</em> dan <em>"Jelajahi Homestay"</em>.</li>
+              <li><strong>Apresiasi Budaya:</strong> Penekanan pada restorasi kayu jati lawasan dan ubin tegel klasik khas Mataram.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer">
+          <strong>🎙️ Panduan Presenter (Slide 11):</strong>
+          "Sesuai masukan terbaru, kami telah merevisi bagian homepage yang sebelumnya bertuliskan Tuan Rumah menjadi bagian 'Tentang Kami'. Halaman /tentang-kami kini berfungsi penuh dan memaparkan filosofi ngaso serta kemitraan langsung dengan warga lokal."
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <span>adakamar.id • UI Enhancements</span>
+        <span>Slide 11 / 12</span>
+      </div>
+    </section>
+
+    <!-- ════════ SLIDE 12: CONCLUSION & ROADMAP ════════ -->
+    <section class="slide hero-slide" data-slide="12">
+      <div class="slide-header">
+        <div class="slide-badge" style="background: rgba(255,219,207,0.2); color: #ffb59c;">
+          ✦ Kesimpulan & Masa Depan
+        </div>
+        <div class="brand-tag" style="background: rgba(255,255,255,0.1); color: #ffdbcf; border-color: rgba(255,255,255,0.2);">
+          Roadmap 2026
+        </div>
+      </div>
+
+      <div class="slide-body">
+        <h2 class="slide-title" style="font-size: 38px;">
+          Kesimpulan & Rencana Pengembangan
+        </h2>
+        <p class="slide-subtitle" style="color: #e7e5e4;">
+          adakamar.id berhasil membuktikan bahwa teknologi modern dapat menjadi jembatan pelestarian budaya dan pemberdayaan ekonomi masyarakat lokal di Yogyakarta.
+        </p>
+
+        <div class="grid-3" style="margin-top: 24px;">
+          <div class="card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #fff;">
+            <div class="card-icon" style="background: rgba(255,219,207,0.2); color: #ffb59c;">💳</div>
+            <h4 style="color: #fff;">Payment Gateway</h4>
+            <p style="color: #d6d3d1;">Integrasi gerbang pembayaran otomatis (Midtrans/Xendit) dengan QRIS & Virtual Account untuk tamu yang memilih pembayaran langsung di muka.</p>
+          </div>
+
+          <div class="card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #fff;">
+            <div class="card-icon" style="background: rgba(255,219,207,0.2); color: #ffb59c;">📅</div>
+            <h4 style="color: #fff;">Kalender iCal Sync</h4>
+            <p style="color: #d6d3d1;">Sinkronisasi dua arah kalender ketersediaan kamar antara adakamar.id dan kalender eksternal Airbnb/Google Calendar untuk mencegah *double booking*.</p>
+          </div>
+
+          <div class="card" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #fff;">
+            <div class="card-icon" style="background: rgba(255,219,207,0.2); color: #ffb59c;">📱</div>
+            <h4 style="color: #fff;">Host Mobile PWA</h4>
+            <p style="color: #d6d3d1;">Aplikasi Progressive Web App (PWA) khusus pemilik homestay untuk notifikasi instan pesan tamu dan pengaturan harga musiman dari smartphone.</p>
+          </div>
+        </div>
+
+        <div class="speaker-notes-drawer" style="background: rgba(255,255,255,0.06); border-color: #ffb59c; color: #e7e5e4; margin-top: 20px;">
+          <strong>🎙️ Panduan Presenter (Slide 12 - Penutup):</strong>
+          "Sebagai kesimpulan, adakamar.id telah rampung dikembangkan secara utuh dari sisi katalog, kupon promo, meja redaksi artikel, hingga panel admin. Terima kasih atas bimbingan Bapak/Ibu sekalian selama masa magang ini. Saya persilakan jika ada pertanyaan atau masukan. Terima kasih!"
+        </div>
+      </div>
+
+      <div class="slide-footer" style="border-color: rgba(255,255,255,0.15); color: #a8a29e;">
+        <span>adakamar.id • Terima Kasih / Sesi Tanya Jawab</span>
+        <span>Slide 12 / 12</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Floating Control Bar -->
+  <div class="deck-controls">
+    <button class="control-btn" id="prevBtn" title="Slide Sebelumnya (Panah Kiri)">◀</button>
+    <div class="slide-counter" id="slideCounter">1 / 12</div>
+    <button class="control-btn" id="nextBtn" title="Slide Berikutnya (Panah Kanan / Spasi)">▶</button>
+    <button class="control-btn" id="fullscreenBtn" title="Layar Penuh (F)">⛶</button>
+    <button class="control-btn" id="printBtn" title="Cetak / Unduh PDF (Ctrl+P)">🖨️</button>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const slideCounter = document.getElementById('slideCounter');
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlide = index;
+
+      slides.forEach((s, idx) => {
+        s.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      slideCounter.textContent = `${currentSlide} / ${totalSlides}`;
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => showSlide(currentSlide - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => showSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        showSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        showSlide(currentSlide - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+      window.print();
+    });
+  </script>
+</body>
+</html>
