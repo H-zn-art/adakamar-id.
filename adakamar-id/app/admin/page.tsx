@@ -101,8 +101,20 @@ export default function AdminDashboard() {
                       )
                     )
                   : 1;
-              const unitPrice = i.property?.price || 0;
-              const totalAmount = unitPrice * nights;
+              // Ekstraksi total dari catatan pemesanan (termasuk promo yang diaplikasikan)
+              let totalAmount = 0;
+              if (i.notes) {
+                const match = i.notes.match(/Total(?: Estimasi)?:\s*Rp\s*([\d\.,]+)/i);
+                if (match && match[1]) {
+                  const parsed = parseInt(match[1].replace(/[.,]/g, ""), 10);
+                  if (!isNaN(parsed) && parsed > 0) totalAmount = parsed;
+                }
+              }
+              if (!totalAmount) {
+                const unitPrice = i.property?.price || 500000;
+                totalAmount = unitPrice * nights;
+              }
+
               return {
                 id: `INQ-${i.id.slice(-6).toUpperCase()}`,
                 guest: i.guestName,
@@ -112,7 +124,7 @@ export default function AdminDashboard() {
                       day: "numeric",
                       month: "short",
                     })
-                  : "-",
+                  : "Fleksibel",
                 nights,
                 amount: `Rp ${totalAmount.toLocaleString("id-ID")}`,
                 status:
@@ -383,7 +395,11 @@ export default function AdminDashboard() {
                               {b.property}
                             </td>
                             <td className="py-4 px-6 text-zinc-500">
-                              {b.checkin} ({b.nights} mlm)
+                              {b.checkin === "Fleksibel" ? (
+                                <span className="text-zinc-400 italic">Fleksibel</span>
+                              ) : (
+                                `${b.checkin} (${b.nights} mlm)`
+                              )}
                             </td>
                             <td className="py-4 px-6 font-bold text-zinc-900">
                               {b.amount}

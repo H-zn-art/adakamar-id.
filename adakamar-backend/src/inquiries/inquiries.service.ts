@@ -81,7 +81,7 @@ export class InquiriesService {
         take: limit,
         include: {
           property: {
-            select: { id: true, name: true, slug: true, whatsappNumber: true },
+            select: { id: true, name: true, slug: true, whatsappNumber: true, price: true, originalPrice: true, address: true },
           },
         },
       }),

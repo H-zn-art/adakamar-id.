@@ -34,7 +34,18 @@ export default function AdminInquiryPage() {
       if (res && Array.isArray(res.data)) {
         const mapped: InquiryItem[] = res.data.map((i: any) => {
           const nights = i.checkInDate && i.checkOutDate ? Math.max(1, Math.round((new Date(i.checkOutDate).getTime() - new Date(i.checkInDate).getTime()) / (1000 * 3600 * 24))) : 1;
-          const unitPrice = i.property?.price || 500000;
+          let totalAmount = 0;
+          if (i.notes) {
+            const match = i.notes.match(/Total(?: Estimasi)?:\s*Rp\s*([\d\.,]+)/i);
+            if (match && match[1]) {
+              const parsed = parseInt(match[1].replace(/[.,]/g, ""), 10);
+              if (!isNaN(parsed) && parsed > 0) totalAmount = parsed;
+            }
+          }
+          if (!totalAmount) {
+            const unitPrice = i.property?.price || 500000;
+            totalAmount = unitPrice * nights;
+          }
           return {
             id: i.id,
             code: `INQ-${i.id.slice(-6).toUpperCase()}`,
@@ -46,7 +57,7 @@ export default function AdminInquiryPage() {
             checkOut: i.checkOutDate ? new Date(i.checkOutDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
             nights,
             guestsCount: i.guestCount || 2,
-            totalAmount: unitPrice * nights,
+            totalAmount,
             status: i.status === "NEW" ? "pending" : i.status === "CONTACTED" ? "confirmed" : i.status === "COMPLETED" ? "completed" : "cancelled",
             notes: i.notes || "",
             createdAt: new Date(i.createdAt).toLocaleDateString("id-ID"),
@@ -416,7 +427,7 @@ export default function AdminInquiryPage() {
               <div className="flex justify-between items-center py-1.5 border-b border-zinc-200/60">
                 <span className="text-zinc-500 font-medium">Jadwal Menginap:</span>
                 <span className="font-bold text-zinc-900 text-right">
-                  {selectedInquiry.checkIn} – {selectedInquiry.checkOut} ({selectedInquiry.nights} malam)
+                  {selectedInquiry.checkIn !== "-" ? `${selectedInquiry.checkIn} – ${selectedInquiry.checkOut} (${selectedInquiry.nights} malam)` : "Tanggal Fleksibel"}
                 </span>
               </div>
               <div className="flex justify-between items-center pt-1">
