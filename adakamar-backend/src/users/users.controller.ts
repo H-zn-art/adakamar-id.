@@ -27,11 +27,11 @@ export class UsersController {
   }
 
   @Patch(':id')
-  async updateProfile(
+  async update(
     @Param('id') id: string,
-    @Body() body: { name?: string; phone?: string; bio?: string },
+    @Body() body: { name?: string; email?: string; password?: string; role?: UserRole; isActive?: boolean; bio?: string; phone?: string },
   ) {
-    return this.usersService.updateProfile(id, body);
+    return this.usersService.updateUser(id, body);
   }
 
   @Patch(':id/toggle-active')

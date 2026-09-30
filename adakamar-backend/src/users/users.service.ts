@@ -98,6 +98,57 @@ export class UsersService {
     });
   }
 
+  async updateUser(
+    id: string,
+    data: {
+      name?: string;
+      email?: string;
+      password?: string;
+      role?: UserRole;
+      isActive?: boolean;
+      bio?: string;
+      phone?: string;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Pengguna tidak ditemukan.');
+    }
+
+    if (data.email && data.email !== user.email) {
+      const existing = await this.prisma.user.findUnique({ where: { email: data.email } });
+      if (existing) {
+        throw new ConflictException('Email ini sudah digunakan oleh akun lain.');
+      }
+    }
+
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.bio !== undefined) updateData.bio = data.bio;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.password && data.password.trim().length > 0) {
+      updateData.password = await bcrypt.hash(data.password.trim(), 10);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        bio: true,
+        phone: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async remove(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {

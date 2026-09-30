@@ -695,6 +695,12 @@ export const usersApi = {
       body: JSON.stringify(data),
     }, 'ADMIN');
   },
+  update: async (id: string, data: { name?: string; email?: string; password?: string; role?: string; isActive?: boolean; bio?: string; phone?: string }) => {
+    return apiFetch(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }, 'ADMIN');
+  },
   toggleActive: async (id: string) => {
     return apiFetch(`/users/${id}/toggle-active`, {
       method: 'PATCH',

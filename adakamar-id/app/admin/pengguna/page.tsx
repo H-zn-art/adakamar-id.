@@ -4,7 +4,28 @@ import AdminSidebar from "@/components/layout/AdminSidebar";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usersApi } from "@/lib/api";
-import { ChevronRight, UserPlus, Users, Home, ShieldCheck, Shield, Search, Edit3, Lock, Trash2, X, FileText } from "lucide-react";
+import {
+  ChevronRight,
+  UserPlus,
+  Users,
+  Home,
+  ShieldCheck,
+  Shield,
+  Search,
+  Edit3,
+  Lock,
+  Trash2,
+  X,
+  FileText,
+  Eye,
+  EyeOff,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Copy,
+  Sparkles,
+} from "lucide-react";
 
 interface UserAccount {
   id: string;
@@ -26,8 +47,17 @@ export default function AdminPenggunaPage() {
 
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formPassword, setFormPassword] = useState("adakamar123");
+  const [showPassword, setShowPassword] = useState(false);
   const [formRole, setFormRole] = useState<UserAccount["role"]>("Penulis");
   const [formStatus, setFormStatus] = useState<"active" | "suspended">("active");
+  const [submitting, setSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const showToast = (type: "success" | "error", text: string) => {
+    setToastMessage({ type, text });
+    setTimeout(() => setToastMessage(null), 5000);
+  };
 
   const loadUsers = async () => {
     try {
@@ -63,6 +93,8 @@ export default function AdminPenggunaPage() {
     setEditingItem(null);
     setFormName("");
     setFormEmail("");
+    setFormPassword("adakamar123");
+    setShowPassword(false);
     setFormRole("Penulis");
     setFormStatus("active");
     setModalOpen(true);
@@ -72,6 +104,8 @@ export default function AdminPenggunaPage() {
     setEditingItem(user);
     setFormName(user.name);
     setFormEmail(user.email);
+    setFormPassword("");
+    setShowPassword(false);
     setFormRole(user.role);
     setFormStatus(user.status);
     setModalOpen(true);
@@ -79,27 +113,44 @@ export default function AdminPenggunaPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
+      const role = formRole === "Super Admin" ? "ADMIN" : "PENULIS";
+
       if (editingItem) {
-        if (
-          (editingItem.status === "active" && formStatus === "suspended") ||
-          (editingItem.status === "suspended" && formStatus === "active")
-        ) {
-          await usersApi.toggleActive(editingItem.id);
-        }
-      } else {
-        const role = formRole === "Super Admin" ? "ADMIN" : "PENULIS";
-        await usersApi.create({
-          name: formName,
-          email: formEmail,
+        await usersApi.update(editingItem.id, {
+          name: formName.trim(),
+          email: formEmail.trim(),
           role,
+          isActive: formStatus === "active",
+          password: formPassword.trim() ? formPassword.trim() : undefined,
         });
+        showToast(
+          "success",
+          `✓ Data akun "${formName}" berhasil diperbarui!${
+            formPassword.trim() ? " Kata sandi baru telah disimpan." : ""
+          }`
+        );
+      } else {
+        const passwordToUse = formPassword.trim() || "adakamar123";
+        await usersApi.create({
+          name: formName.trim(),
+          email: formEmail.trim(),
+          role,
+          password: passwordToUse,
+        });
+        showToast(
+          "success",
+          `✓ Akun "${formName}" (${formEmail}) berhasil dibuat! Kata sandi: "${passwordToUse}". Akun ini siap digunakan untuk login di /masuk.`
+        );
       }
+      setModalOpen(false);
+      await loadUsers();
     } catch (err: any) {
-      alert(err.message || "Gagal menyimpan akun pengguna.");
+      showToast("error", err?.message || "Gagal menyimpan akun pengguna.");
+    } finally {
+      setSubmitting(false);
     }
-    setModalOpen(false);
-    await loadUsers();
   };
 
   const handleDelete = async (id: string) => {
@@ -151,6 +202,33 @@ export default function AdminPenggunaPage() {
 
         {/* Body */}
         <main className="p-8 max-w-[1440px] w-full flex flex-col gap-6">
+          {/* Toast Notification Alert */}
+          {toastMessage && (
+            <div
+              className={`p-4 rounded-2xl flex items-center justify-between gap-3 text-xs font-semibold shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 ${
+                toastMessage.type === "success"
+                  ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                  : "bg-rose-50 text-rose-900 border border-rose-200"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                {toastMessage.type === "success" ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                )}
+                <span>{toastMessage.text}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setToastMessage(null)}
+                className="text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full bg-[#ffdbcf]/60 text-[#9f3c16] text-[11px] font-bold uppercase tracking-wider">
@@ -412,6 +490,51 @@ export default function AdminPenggunaPage() {
                 />
               </div>
 
+              {/* Password Field */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-zinc-800 block">
+                    {editingItem ? "Ganti Kata Sandi (Opsional)" : "Kata Sandi Akun (Password) *"}
+                  </label>
+                  {!editingItem && (
+                    <button
+                      type="button"
+                      onClick={() => setFormPassword("adakamar123")}
+                      className="text-[10px] text-[#9f3c16] font-bold hover:underline cursor-pointer"
+                    >
+                      Reset ke default
+                    </button>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required={!editingItem}
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    placeholder={
+                      editingItem
+                        ? "Kosongkan jika tidak ingin mengubah kata sandi"
+                        : "Minimal 6 karakter (Default: adakamar123)"
+                    }
+                    className="w-full h-10 pl-3.5 pr-10 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 transition-all text-zinc-900 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  {editingItem
+                    ? "Isi kolom ini hanya jika staf lupa sandi atau ingin mereset kata sandinya."
+                    : "Kata sandi yang digunakan akun ini untuk login di halaman Masuk (/masuk)."}
+                </p>
+              </div>
+
               <div>
                 <label className="font-semibold text-zinc-800 block mb-1">
                   Peran Akun (Role)
@@ -454,9 +577,11 @@ export default function AdminPenggunaPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-[#9f3c16] hover:bg-[#853212] text-white font-semibold shadow-sm transition-all active:scale-[0.98]"
+                  disabled={submitting}
+                  className="px-5 py-2.5 rounded-2xl bg-[#9f3c16] hover:bg-[#853212] text-white font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
-                  Simpan Akun
+                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{editingItem ? "Simpan Perubahan" : "Simpan Akun Baru"}</span>
                 </button>
               </div>
             </form>
