@@ -112,7 +112,7 @@ async function main() {
       capacity: 4,
       bedroomCount: 2,
       bathroomCount: 2,
-      whatsappNumber: '6281234567890',
+      whatsappNumber: '6285795445463',
       status: PropertyStatus.ACTIVE,
       isFeatured: true,
       isPopular: true,
@@ -336,8 +336,8 @@ async function main() {
   });
   await prisma.siteSetting.upsert({
     where: { key: 'contact_whatsapp' },
-    update: {},
-    create: { key: 'contact_whatsapp', value: '6281234567890' },
+    update: { value: '6285795445463' },
+    create: { key: 'contact_whatsapp', value: '6285795445463' },
   });
   await prisma.siteSetting.upsert({
     where: { key: 'maintenance_mode' },

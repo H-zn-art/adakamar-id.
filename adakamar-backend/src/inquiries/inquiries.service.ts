@@ -36,7 +36,10 @@ export class InquiriesService {
     });
 
     // Generate formatted WhatsApp URL for the guest (PRD Section 11 & 14)
-    const cleanNumber = property.whatsappNumber.replace(/[^0-9]/g, '');
+    const rawNumber = property.whatsappNumber && property.whatsappNumber !== '6281234567890'
+      ? property.whatsappNumber
+      : '6285795445463';
+    const cleanNumber = rawNumber.replace(/[^0-9]/g, '');
     const phone = cleanNumber.startsWith('0') ? '62' + cleanNumber.substring(1) : cleanNumber;
 
     // URL properti untuk referensi admin/pemilik
