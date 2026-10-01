@@ -43,7 +43,8 @@ export class InquiriesService {
     const phone = cleanNumber.startsWith('0') ? '62' + cleanNumber.substring(1) : cleanNumber;
 
     // URL properti untuk referensi admin/pemilik
-    const propertyUrl = `https://adakamar.id/homestay/${property.slug}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://adakamar.id';
+    const propertyUrl = `${frontendUrl.replace(/\/$/, '')}/homestay/${property.slug}`;
 
     const message = `Halo Pengelola ${property.name}, saya ${dto.guestName} ingin reservasi homestay melalui adakamar.id.\n\n` +
       `📋 Detail Pemesanan:\n` +
