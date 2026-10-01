@@ -184,7 +184,7 @@ export default function ForgotPasswordPage() {
                 <p className="text-[11px] text-on-surface-variant">
                   Butuh akses mendesak untuk check-in hari ini?{" "}
                   <a
-                    href="https://wa.me/6281234567890"
+                    href="https://wa.me/6285795445463"
                     target="_blank"
                     rel="noreferrer"
                     className="text-primary font-bold hover:underline"

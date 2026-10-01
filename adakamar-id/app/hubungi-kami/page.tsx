@@ -81,11 +81,11 @@ export default function ContactPage() {
                     Layanan Siaga 24 Jam
                   </div>
                   <div className="text-sm font-bold text-on-surface">
-                    +62 812-3456-7890
+                    +62 857-9544-5463
                   </div>
                 </div>
                 <a
-                  href="https://wa.me/6281234567890"
+                  href="https://wa.me/6285795445463"
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-2 bg-success-forest text-white rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-1 shadow-sm"
@@ -200,12 +200,12 @@ export default function ContactPage() {
                     Bantuan cepat reservasi dan rekomendasi homestay privat.
                   </p>
                   <a
-                    href="https://wa.me/6281234567890"
+                    href="https://wa.me/6285795445463"
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs font-bold text-primary hover:underline mt-1"
                   >
-                    +62 812-3456-7890 →
+                    +62 857-9544-5463 →
                   </a>
                 </div>
 

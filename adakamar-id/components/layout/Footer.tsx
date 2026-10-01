@@ -40,7 +40,7 @@ const footerLinks = {
     { label: "Kebijakan Pembatalan", href: "/kebijakan-pembatalan" },
     { label: "Syarat & Ketentuan", href: "/syarat-ketentuan" },
     { label: "Kebijakan Privasi", href: "/kebijakan-privasi" },
-    { label: "Hubungi CS WhatsApp", href: "https://wa.me/628123456789" },
+    { label: "Hubungi CS WhatsApp", href: "https://wa.me/6285795445463" },
   ],
 };
 

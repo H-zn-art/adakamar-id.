@@ -968,7 +968,7 @@ export default function PromoPage() {
               </div>
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <a
-                  href="https://wa.me/628123456789"
+                  href="https://wa.me/6285795445463"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",

@@ -183,7 +183,7 @@ export default function BukaHomestayPage() {
                   Daftar Gratis Sekarang
                 </a>
                 <a
-                  href="https://wa.me/628123456789"
+                  href="https://wa.me/6285795445463"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -566,7 +566,7 @@ export default function BukaHomestayPage() {
               ))}
             </div>
             <div style={{ textAlign: "center", marginTop: "24px" }}>
-              <a href="https://wa.me/628123456789" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "10px", background: "#25d366", color: "#fff", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
+              <a href="https://wa.me/6285795445463" style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "10px 20px", borderRadius: "10px", background: "#25d366", color: "#fff", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
                 <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>chat</span>
                 Tanya Langsung via WhatsApp
               </a>

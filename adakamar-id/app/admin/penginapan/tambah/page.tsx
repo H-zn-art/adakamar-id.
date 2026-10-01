@@ -185,7 +185,7 @@ function AddEditPenginapanContent() {
     status: "active",
     featured: false,
     amenities: [] as string[],
-    whatsapp: "6281234567890",
+    whatsapp: "6285795445463",
     categoryId: "",
   });
 
@@ -239,7 +239,7 @@ function AddEditPenginapanContent() {
                   .map((f: any) => f.facility?.name || f.name)
                   .filter(Boolean)
               : [],
-            whatsapp: data.whatsappNumber || "6281234567890",
+            whatsapp: data.whatsappNumber || "6285795445463",
             categoryId: data.categoryId || "",
           });
 
@@ -341,7 +341,7 @@ function AddEditPenginapanContent() {
         capacity: Number(formData.guests) || 2,
         bedroomCount: Number(formData.bedrooms) || 1,
         bathroomCount: Number(formData.bathrooms) || 1,
-        whatsappNumber: formData.whatsapp || "6281234567890",
+        whatsappNumber: formData.whatsapp || "6285795445463",
         status: formData.status === "active" ? ("ACTIVE" as const) : ("INACTIVE" as const),
         isFeatured: formData.featured,
         facilityIds: facilityIds.length > 0 ? facilityIds : undefined,
@@ -911,7 +911,7 @@ function AddEditPenginapanContent() {
                       </label>
                       <input
                         type="text"
-                        placeholder="Contoh: 6281234567890"
+                        placeholder="Contoh: 085795445463 atau 6285795445463"
                         value={formData.whatsapp}
                         onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                         className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none font-semibold"

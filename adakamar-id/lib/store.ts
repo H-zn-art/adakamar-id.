@@ -87,7 +87,7 @@ const DEFAULT_HOMESTAYS: HomestayData[] = [
     description:
       'Homestay bernuansa joglo antik Jawa klasik dengan kolam renang privat di kawasan hits Prawirotaman. Berjarak hanya 10 menit ke Kraton Jogja.',
     address: 'Jl. Prawirotaman No. 36, Mergangsan, Kota Yogyakarta',
-    whatsappNumber: '6281234567890',
+    whatsappNumber: '6285795445463',
   },
   {
     id: 'hs-2',
@@ -259,7 +259,7 @@ export const store = {
       capacity: data.capacity || `${data.capacity || 4} Tamu`,
       amenities: data.amenities || ['Wi-Fi', 'AC', 'Parkir'],
       address: data.address || 'Yogyakarta',
-      whatsappNumber: data.whatsappNumber || '6281234567890',
+      whatsappNumber: data.whatsappNumber || '6285795445463',
     };
 
     const existingIndex = list.findIndex((h) => h.id === id || h.slug === slug);

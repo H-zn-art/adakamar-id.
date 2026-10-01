@@ -774,39 +774,60 @@ export default async function DetailPage({
                   {amenities.length > 0 ? `${amenities.length} Fasilitas Tersedia` : "Fasilitas belum diisi"}
                 </span>
               </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, 1fr)",
-                  gap: "10px",
-                }}
-                className="amenities-grid"
-              >
-                {amenities.map((a) => (
-                  <div
-                    key={a.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      fontSize: "14px",
-                      color: "#1a1b22",
-                      padding: "8px 12px",
-                      background: "#fdf6f3",
-                      borderRadius: "10px",
-                      border: "1px solid #f3d5ca",
-                    }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ color: "#9f3c16", fontSize: "18px", flexShrink: 0 }}
+              {amenities.length === 0 ? (
+                <div
+                  style={{
+                    padding: "16px 20px",
+                    borderRadius: "12px",
+                    background: "#fdf6f3",
+                    border: "1px dashed #f3d5ca",
+                    color: "#8c7068",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ color: "#9f3c16", fontSize: "20px" }}>
+                    info
+                  </span>
+                  Belum ada fasilitas khusus yang ditambahkan pada penginapan ini.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: "10px",
+                  }}
+                  className="amenities-grid"
+                >
+                  {amenities.map((a) => (
+                    <div
+                      key={a.label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        fontSize: "14px",
+                        color: "#1a1b22",
+                        padding: "8px 12px",
+                        background: "#fdf6f3",
+                        borderRadius: "10px",
+                        border: "1px solid #f3d5ca",
+                      }}
                     >
-                      {a.icon}
-                    </span>
-                    {a.label}
-                  </div>
-                ))}
-              </div>
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ color: "#9f3c16", fontSize: "18px", flexShrink: 0 }}
+                      >
+                        {a.icon}
+                      </span>
+                      {a.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Map placeholder */}
