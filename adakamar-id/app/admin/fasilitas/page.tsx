@@ -14,16 +14,59 @@ interface FacilityItem {
   description: string;
 }
 
+const AVAILABLE_ICONS: { icon: string; label: string }[] = [
+  { icon: "ac_unit", label: "AC" },
+  { icon: "bathroom", label: "Kamar Mandi" },
+  { icon: "tv", label: "TV" },
+  { icon: "kitchen", label: "Dapur" },
+  { icon: "bed", label: "Kamar Tidur" },
+  { icon: "hot_tub", label: "Water Heater" },
+  { icon: "local_laundry_service", label: "Mesin Cuci" },
+  { icon: "wifi", label: "Wi-Fi" },
+  { icon: "desk", label: "Meja Kerja" },
+  { icon: "router", label: "Router" },
+  { icon: "pool", label: "Kolam Renang" },
+  { icon: "yard", label: "Taman" },
+  { icon: "spa", label: "Spa/Relaksasi" },
+  { icon: "restaurant", label: "Sarapan" },
+  { icon: "outdoor_grill", label: "BBQ Area" },
+  { icon: "local_cafe", label: "Kafe/Kopi" },
+  { icon: "local_parking", label: "Parkir" },
+  { icon: "security", label: "CCTV" },
+  { icon: "elevator", label: "Lift" },
+  { icon: "accessible", label: "Ramah Difabel" },
+  { icon: "deck", label: "Pendopo" },
+  { icon: "cottage", label: "Joglo" },
+  { icon: "nature", label: "Alam Terbuka" },
+  { icon: "check_circle", label: "Umum" },
+  { icon: "star", label: "Unggulan" },
+  { icon: "pets", label: "Pet Friendly" },
+  { icon: "child_friendly", label: "Ramah Anak" },
+  { icon: "smoke_free", label: "Non-Merokok" },
+];
+
+const CATEGORIES = [
+  "Kenyamanan Ruang",
+  "Konektivitas",
+  "Air & Rekreasi",
+  "Gastronomi",
+  "Aksesibilitas",
+  "Arsitektur Heritage",
+  "Umum",
+];
+
 export default function AdminFasilitasPage() {
   const [facilities, setFacilities] = useState<FacilityItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FacilityItem | null>(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState("");
 
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("Kenyamanan Ruang");
-  const [formIcon, setFormIcon] = useState("star");
+  const [formIcon, setFormIcon] = useState("check_circle");
   const [formDesc, setFormDesc] = useState("");
 
   const loadFacilities = async () => {
@@ -61,8 +104,10 @@ export default function AdminFasilitasPage() {
     setEditingItem(null);
     setFormName("");
     setFormCategory("Kenyamanan Ruang");
-    setFormIcon("star");
+    setFormIcon("check_circle");
     setFormDesc("");
+    setIconSearch("");
+    setShowIconPicker(false);
     setModalOpen(true);
   };
 
@@ -72,6 +117,8 @@ export default function AdminFasilitasPage() {
     setFormCategory(item.category);
     setFormIcon(item.icon);
     setFormDesc(item.description);
+    setIconSearch("");
+    setShowIconPicker(false);
     setModalOpen(true);
   };
 
@@ -118,6 +165,12 @@ export default function AdminFasilitasPage() {
     const matchCat = selectedCategory === "all" || f.category === selectedCategory;
     return matchSearch && matchCat;
   });
+
+  const filteredIcons = AVAILABLE_ICONS.filter((i) =>
+    iconSearch === "" ||
+    i.label.toLowerCase().includes(iconSearch.toLowerCase()) ||
+    i.icon.includes(iconSearch.toLowerCase())
+  );
 
   return (
     <div className="bg-[#f8f7fb] min-h-screen flex font-sans">
@@ -241,104 +294,57 @@ export default function AdminFasilitasPage() {
               />
             </div>
 
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-10 px-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 text-xs font-semibold text-zinc-700 focus:bg-white focus:outline-none cursor-pointer"
-            >
-              <option value="all">Semua Kategori</option>
-              <option value="Air & Rekreasi">Air & Rekreasi</option>
-              <option value="Kenyamanan Ruang">Kenyamanan Ruang</option>
-              <option value="Konektivitas">Konektivitas</option>
-              <option value="Arsitektur Heritage">Arsitektur Heritage</option>
-              <option value="Gastronomi">Gastronomi</option>
-              <option value="Aksesibilitas">Aksesibilitas</option>
-            </select>
-          </div>
-
-          {/* Data Table */}
-          <div className="bg-white rounded-3xl border border-zinc-200/80 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-50/60 border-b border-zinc-100 text-zinc-500 uppercase text-[11px] font-bold">
-                  <tr>
-                    <th className="px-6 py-4">Fasilitas</th>
-                    <th className="px-5 py-4">Kategori</th>
-                    <th className="px-5 py-4">Deskripsi</th>
-                    <th className="px-5 py-4">Digunakan Di</th>
-                    <th className="px-6 py-4 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {filtered.map((f) => (
-                    <tr
-                      key={f.id}
-                      className="hover:bg-zinc-50/80 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-[#ffdbcf]/50 text-[#9f3c16] flex items-center justify-center shrink-0 border border-zinc-200/60">
-                            <span className="material-symbols-outlined text-[20px]">
-                              {f.icon}
-                            </span>
-                          </div>
-                          <span className="font-bold text-zinc-900 text-xs">
-                            {f.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 font-medium text-[11px]">
-                          {f.category}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-zinc-500 max-w-sm leading-relaxed">
-                        {f.description}
-                      </td>
-                      <td className="px-5 py-4 font-bold text-[#9f3c16]">
-                        {f.usageCount} homestay
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(f)}
-                            className="p-2 rounded-xl hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"
-                            title="Edit Fasilitas"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">
-                              edit
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(f.id)}
-                            className="p-2 rounded-xl hover:bg-rose-50 text-zinc-400 hover:text-rose-700 transition-colors"
-                            title="Hapus"
-                          >
-                            <span className="material-symbols-outlined text-[18px]">
-                              delete
-                            </span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-14 text-center text-zinc-400">
-                        <span className="material-symbols-outlined text-[40px] opacity-20 block mb-2">
-                          category
-                        </span>
-                        <p className="font-semibold text-sm text-zinc-600">Belum ada fasilitas yang cocok</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">Ubah kata kunci pencarian atau tambahkan fasilitas baru.</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="flex gap-2 flex-wrap">
+              {["all", ...CATEGORIES].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? "bg-[#9f3c16] text-white shadow-sm"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {cat === "all" ? "Semua" : cat}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Facilities Card Grid (Visual) */}
+          {filtered.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {filtered.map((f) => (
+                <div key={f.id} className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs hover:shadow-md hover:border-zinc-300 transition-all flex flex-col items-center text-center p-4 gap-2 group relative">
+                  <div className="w-12 h-12 rounded-2xl bg-[#ffdbcf]/50 text-[#9f3c16] flex items-center justify-center border border-[#ffdbcf] group-hover:bg-[#ffdbcf] transition-colors">
+                    <span className="material-symbols-outlined text-[22px]">{f.icon}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-zinc-900 text-[11px] leading-snug line-clamp-2">{f.name}</p>
+                    <span className="text-[10px] text-zinc-400 font-medium mt-0.5 inline-block">{f.category}</span>
+                    {f.usageCount > 0 && (
+                      <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">{f.usageCount} homestay</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button type="button" onClick={() => handleOpenEdit(f)} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer" title="Edit">
+                      <span className="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                    <button type="button" onClick={() => handleDelete(f.id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-zinc-400 hover:text-rose-600 transition-colors cursor-pointer" title="Hapus">
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-zinc-200/80 shadow-xs py-16 text-center">
+              <span className="material-symbols-outlined text-[48px] text-zinc-200 block mb-3">category</span>
+              <p className="font-semibold text-sm text-zinc-600">Belum ada fasilitas yang cocok</p>
+              <p className="text-xs text-zinc-400 mt-0.5">Ubah kata kunci atau tambahkan fasilitas baru.</p>
+            </div>
+          )}
         </main>
       </div>
 
@@ -403,16 +409,44 @@ export default function AdminFasilitasPage() {
               </div>
 
               <div>
-                <label className="font-semibold text-zinc-800 block mb-1">
-                  Icon (Google Material Symbol)
-                </label>
-                <input
-                  type="text"
-                  value={formIcon}
-                  onChange={(e) => setFormIcon(e.target.value)}
-                  placeholder="pool, wifi, ac_unit, deck, etc."
-                  className="w-full h-10 px-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:bg-white focus:outline-none font-mono text-[11px] text-zinc-800"
-                />
+                <label className="font-semibold text-zinc-800 block mb-2">Pilih Ikon</label>
+                {/* Preview & trigger */}
+                <button type="button" onClick={() => setShowIconPicker(!showIconPicker)}
+                  className="w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-[#9f3c16]/40 bg-[#ffdbcf]/20 hover:bg-[#ffdbcf]/30 transition-colors cursor-pointer mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-[#9f3c16] text-white flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">{formIcon}</span>
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-[#9f3c16] text-xs">Ikon Terpilih: {formIcon}</p>
+                    <p className="text-[10px] text-zinc-500">{AVAILABLE_ICONS.find((i) => i.icon === formIcon)?.label || "Kustom"}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-zinc-400 text-[18px]">{showIconPicker ? "expand_less" : "expand_more"}</span>
+                </button>
+                {showIconPicker && (
+                  <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-zinc-50 mb-2">
+                    <div className="p-3 border-b border-zinc-200 bg-white">
+                      <input type="text" placeholder="Cari ikon..." value={iconSearch} onChange={(e) => setIconSearch(e.target.value)}
+                        className="w-full h-8 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs focus:outline-none" />
+                    </div>
+                    <div className="grid grid-cols-6 gap-1 p-3 max-h-48 overflow-y-auto">
+                      {filteredIcons.map((item) => (
+                        <button key={item.icon} type="button" title={item.label}
+                          onClick={() => { setFormIcon(item.icon); setShowIconPicker(false); }}
+                          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all cursor-pointer ${
+                            formIcon === item.icon ? "bg-[#9f3c16] text-white" : "hover:bg-zinc-200 text-zinc-500"
+                          }`}>
+                          <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                          <span className="text-[8px] font-medium leading-none text-center line-clamp-1">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-3 border-t border-zinc-200 bg-white">
+                      <label className="text-[10px] text-zinc-400 font-medium block mb-1">Atau ketik nama ikon kustom:</label>
+                      <input type="text" value={formIcon} onChange={(e) => setFormIcon(e.target.value)} placeholder="pool, wifi, ac_unit..."
+                        className="w-full h-8 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs font-mono focus:outline-none" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

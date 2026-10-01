@@ -30,7 +30,7 @@ export class InquiriesService {
       },
       include: {
         property: {
-          select: { name: true, whatsappNumber: true, price: true },
+          select: { name: true, whatsappNumber: true, price: true, slug: true },
         },
       },
     });
@@ -39,14 +39,18 @@ export class InquiriesService {
     const cleanNumber = property.whatsappNumber.replace(/[^0-9]/g, '');
     const phone = cleanNumber.startsWith('0') ? '62' + cleanNumber.substring(1) : cleanNumber;
 
+    // URL properti untuk referensi admin/pemilik
+    const propertyUrl = `https://adakamar.id/homestay/${property.slug}`;
+
     const message = `Halo Pengelola ${property.name}, saya ${dto.guestName} ingin reservasi homestay melalui adakamar.id.\n\n` +
-      `Detail Pemesanan:\n` +
+      `📋 Detail Pemesanan:\n` +
       `- Nama Tamu: ${dto.guestName}\n` +
       `- No. WA: ${dto.guestPhone}\n` +
-      `- Check-in: ${dto.checkInDate || '-'}\n` +
-      `- Check-out: ${dto.checkOutDate || '-'}\n` +
+      `- Check-in: ${dto.checkInDate || 'Fleksibel'}\n` +
+      `- Check-out: ${dto.checkOutDate || 'Fleksibel'}\n` +
       `- Jumlah Tamu: ${dto.guestCount || 2} Orang\n` +
       (dto.notes ? `- Catatan: ${dto.notes}\n` : '') +
+      `\n🏠 Penginapan yang Dipesan:\n${property.name}\n${propertyUrl}\n` +
       `\nMohon konfirmasi ketersediaan unit dan total biayanya. Matur nuwun.`;
 
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
