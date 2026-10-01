@@ -78,7 +78,7 @@ export default async function DetailPage({
   let propertyCategory = "";
   let propertyArea = "";
   let propertyImages: string[] = [];
-  let propertyFacilities: string[] = [];
+  let propertyFacilities: { name: string; icon: string }[] = [];
   let propertyWhatsapp = "";
   let propertyRules = "";
   let propertyReviews: any[] = [];
@@ -114,8 +114,11 @@ export default async function DetailPage({
           .map((img: any) => img.imageUrl)
           .filter(Boolean);
         propertyFacilities = (p.facilities || [])
-          .map((f: any) => f.facility?.name || f.name)
-          .filter(Boolean);
+          .map((f: any) => ({
+            name: f.facility?.name || f.name || "",
+            icon: f.facility?.icon || f.icon || "check_circle",
+          }))
+          .filter((f: any) => Boolean(f.name));
         propertyReviews = Array.isArray(p.reviews) ? p.reviews : [];
         // Similar properties from API response
         similarProps = (data?.similar || []).map((s: any) => ({
@@ -147,24 +150,11 @@ export default async function DetailPage({
     ? propertyImages.slice(1, 5)
     : [defaultImage, defaultImage, defaultImage, defaultImage];
 
-  // Build amenities list from DB facilities
-  const iconMap: Record<string, string> = {
-    "wifi": "wifi", "ac": "ac_unit", "parkir": "local_parking", "kolam": "pool",
-    "pool": "pool", "dapur": "kitchen", "kitchen": "kitchen", "tv": "tv",
-    "kulkas": "kitchen", "laundry": "local_laundry_service", "keamanan": "security",
-    "cctv": "camera_indoor", "spa": "spa", "gym": "fitness_center", "bbq": "outdoor_grill",
-    "bathtub": "bathtub", "sarapan": "local_dining", "breakfast": "local_dining",
-  };
-  const getIcon = (name: string) => {
-    const lower = name.toLowerCase();
-    for (const [key, icon] of Object.entries(iconMap)) {
-      if (lower.includes(key)) return icon;
-    }
-    return "check_circle";
-  };
-  const amenities = propertyFacilities.length > 0
-    ? propertyFacilities.map((f) => ({ icon: getIcon(f), label: f }))
-    : [];
+  // Build amenities list from DB facilities (use icon from DB directly)
+  const amenities = propertyFacilities.map((f) => ({
+    icon: f.icon || "check_circle",
+    label: f.name,
+  }));
 
   return (
     <>
@@ -787,7 +777,7 @@ export default async function DetailPage({
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr",
+                  gridTemplateColumns: "repeat(2, 1fr)",
                   gap: "10px",
                 }}
                 className="amenities-grid"
@@ -801,6 +791,10 @@ export default async function DetailPage({
                       gap: "10px",
                       fontSize: "14px",
                       color: "#1a1b22",
+                      padding: "8px 12px",
+                      background: "#fdf6f3",
+                      borderRadius: "10px",
+                      border: "1px solid #f3d5ca",
                     }}
                   >
                     <span
@@ -813,23 +807,6 @@ export default async function DetailPage({
                   </div>
                 ))}
               </div>
-              <button
-                style={{
-                  marginTop: "16px",
-                  padding: "8px 20px",
-                  borderRadius: "8px",
-                  background: "transparent",
-                  border: "1.5px solid #dec0b7",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  color: "#1a1b22",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  transition: "all 0.15s",
-                }}
-              >
-                Tampilkan Semua Fasilitas (31)
-              </button>
             </div>
 
             {/* Map placeholder */}

@@ -65,7 +65,7 @@ export default function AdminPenginapanPage() {
     capacity: 4,
     bedroomCount: 2,
     bathroomCount: 1,
-    whatsappNumber: "6281234567890",
+    whatsappNumber: "6285795445463",
     description: "",
     rules: "",
     status: "ACTIVE" as "ACTIVE" | "INACTIVE",
@@ -1179,7 +1179,7 @@ export default function AdminPenginapanPage() {
                     <input
                       type="text"
                       required
-                      placeholder="6281234567890"
+                      placeholder="6285795445463"
                       value={formProp.whatsappNumber}
                       onChange={(e) => setFormProp({ ...formProp, whatsappNumber: e.target.value })}
                       className="w-full h-10 px-3.5 rounded-xl bg-white border border-zinc-300 text-xs text-zinc-900 focus:outline-none"
