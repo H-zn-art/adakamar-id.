@@ -9,6 +9,7 @@ import {
   Mail,
   FileText,
   Star,
+  MessageSquare,
   ArrowRight,
   Plus,
   ArrowUpRight,
@@ -115,10 +116,18 @@ export default function AdminDashboard() {
                 totalAmount = unitPrice * nights;
               }
 
+              // Ekstraksi tipe kamar
+              let roomTypeName = i.roomTypeName || "";
+              if (!roomTypeName && i.notes) {
+                const match = i.notes.match(/\[Kamar:\s*([^\]\-]+)/);
+                if (match) roomTypeName = match[1].trim();
+              }
+
               return {
                 id: `INQ-${i.id.slice(-6).toUpperCase()}`,
                 guest: i.guestName,
                 property: i.property?.name || "Homestay Jogja",
+                roomTypeName,
                 checkin: i.checkInDate
                   ? new Date(i.checkInDate).toLocaleDateString("id-ID", {
                       day: "numeric",
@@ -240,10 +249,10 @@ export default function AdminDashboard() {
       href: "/admin/pengguna",
     },
     {
-      label: "Rata-rata Rating",
-      value: stats.avgRating ? `${stats.avgRating} ★` : (stats.propertyCount > 0 ? "Baru" : "—"),
-      desc: stats.avgRating ? `${stats.totalReviews} ulasan terverifikasi` : (stats.propertyCount > 0 ? "Belum ada ulasan tamu" : "Kepuasan tamu"),
-      icon: Star,
+      label: "Total Ulasan",
+      value: String(stats.totalReviews),
+      desc: stats.avgRating ? `Rata-rata ${stats.avgRating} ★ kepuasan` : (stats.propertyCount > 0 ? "Belum ada ulasan tamu" : "Ulasan tamu"),
+      icon: MessageSquare,
       color: "text-[#9f3c16]",
       bg: "bg-[#ffdbcf]/60",
       href: "/admin/penginapan",
@@ -391,8 +400,13 @@ export default function AdminDashboard() {
                             <td className="py-4 px-6 font-semibold text-zinc-900">
                               {b.guest}
                             </td>
-                            <td className="py-4 px-6 text-zinc-600 truncate max-w-[180px]">
-                              {b.property}
+                            <td className="py-4 px-6 text-zinc-600 truncate max-w-[200px]">
+                              <span className="font-semibold text-zinc-900 block truncate">{b.property}</span>
+                              {b.roomTypeName && (
+                                <span className="inline-block text-[10px] font-bold text-[#9f3c16] bg-[#ffdbcf]/60 px-1.5 py-0.5 rounded mt-0.5 truncate max-w-full">
+                                  {b.roomTypeName}
+                                </span>
+                              )}
                             </td>
                             <td className="py-4 px-6 text-zinc-500">
                               {b.checkin === "Fleksibel" ? (

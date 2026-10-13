@@ -14,6 +14,7 @@ interface ArticleCardProps {
   date: string;
   readTime: string;
   featured?: boolean;
+  tags?: (string | { id?: string; name: string; slug?: string })[];
 }
 
 export default function ArticleCard({
@@ -28,7 +29,13 @@ export default function ArticleCard({
   date,
   readTime,
   featured = false,
+  tags = [],
 }: ArticleCardProps) {
+  const displayTags = Array.isArray(tags)
+    ? tags
+        .map((t) => (typeof t === "string" ? t : t?.name || ""))
+        .filter(Boolean)
+    : [];
   return (
     <Link
       href={`/panduan-jogja/${slug}`}
@@ -78,6 +85,25 @@ export default function ArticleCard({
               <p className="text-xs text-zinc-600 line-clamp-2 mt-2 leading-relaxed">
                 {excerpt}
               </p>
+            )}
+
+            {/* Article Tags */}
+            {displayTags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                {displayTags.slice(0, 3).map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-[#ffdbcf]/50 text-[#9f3c16] border border-[#ffdbcf] group-hover:bg-[#ffdbcf] transition-colors"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+                {displayTags.length > 3 && (
+                  <span className="text-[10px] text-zinc-400 font-medium">
+                    +{displayTags.length - 3}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

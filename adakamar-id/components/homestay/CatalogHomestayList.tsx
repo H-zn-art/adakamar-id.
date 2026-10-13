@@ -31,13 +31,8 @@ function mapBackendProperty(p: any) {
     capacity,
     price: p.price,
     originalPrice: p.originalPrice,
-    badge:
-      p.isFeatured || p.featured
-        ? "Pilihan Kurator"
-        : p.category?.name || p.type || "Homestay",
-    badgeType: (p.isFeatured || p.featured
-      ? "best-seller"
-      : "superhost") as any,
+    badge: p.category?.name || p.type || "Homestay",
+    badgeType: "superhost" as any,
     extraBadge:
       location.toLowerCase().includes("kraton") ||
       location.toLowerCase().includes("malioboro")

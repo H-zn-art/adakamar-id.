@@ -1,54 +1,47 @@
+"use client";
+
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { categoriesApi } from "@/lib/api";
 import {
   Sparkles,
   ShieldCheck,
   CheckCircle2,
   Zap,
   Heart,
-  Phone,
-  Mail,
-  MapPin,
-  ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 
-const footerLinks = {
-  destinasiPopuler: [
-    { label: "Malioboro & Kraton", href: "/area/malioboro-kraton" },
-    { label: "Prawirotaman", href: "/area/prawirotaman" },
-    { label: "Kaliurang & Merapi", href: "/area/kaliurang-merapi" },
-    { label: "Kotagede Heritage", href: "/area/kotagede" },
-    { label: "Sleman Pedesaan", href: "/area/sleman-pedesaan" },
-    { label: "Bantul & Kasongan", href: "/area/bantul-kasongan" },
-  ],
-  kategori: [
-    { label: "Rumah Joglo Asli", href: "/kategori/joglo-autentik" },
-    { label: "Villa Kolam Renang", href: "/kategori/villa-private-pool" },
-    { label: "Homestay Syariah", href: "/kategori/homestay-syariah" },
-    { label: "Pondok Tepi Sawah", href: "/kategori/tepi-sawah" },
-    { label: "Studio Urban", href: "/kategori/studio-urban" },
-  ],
-  tuanRumah: [
-    { label: "Daftarkan Homestay", href: "/buka-homestay" },
-    { label: "Komunitas Host Jogja", href: "/komunitas-host" },
-    { label: "Standar Kebersihan", href: "/standar-kebersihan" },
-    { label: "Jaminan Perlindungan", href: "/jaminan-perlindungan" },
-    { label: "Kalkulator Potensi Sewa", href: "/kalkulator-sewa" },
-  ],
-  dukungan: [
-    { label: "Tentang Kami", href: "/tentang-kami" },
-    { label: "Pusat Bantuan 24/7", href: "/bantuan" },
-    { label: "Kebijakan Pembatalan", href: "/kebijakan-pembatalan" },
-    { label: "Syarat & Ketentuan", href: "/syarat-ketentuan" },
-    { label: "Kebijakan Privasi", href: "/kebijakan-privasi" },
-    { label: "Hubungi CS WhatsApp", href: "https://wa.me/6285795445463" },
-  ],
-};
+const initialCategories = [
+  { name: "Villa Private Pool", slug: "villa-private-pool" },
+  { name: "Joglo Autentik Heritage", slug: "joglo-autentik" },
+  { name: "Limasan Pedesaan", slug: "limasan-pedesaan" },
+  { name: "Family Retreat", slug: "family-retreat" },
+];
 
 export default function Footer() {
+  const [categories, setCategories] = useState(initialCategories);
+
+  useEffect(() => {
+    categoriesApi
+      .list()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCategories(
+            data.slice(0, 5).map((c: any) => ({
+              name: c.name,
+              slug: c.slug || c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <footer className="bg-zinc-950 border-t border-white/10 pt-16 pb-12 text-zinc-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Brand & Links Grid */}
+        {/* Brand & Active Links Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-white/10">
           {/* Column 1: Brand & Bio */}
           <div className="lg:col-span-2 flex flex-col gap-4">
@@ -82,60 +75,123 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Column 2: Destinasi Populer */}
+          {/* Column 2: Jelajah Navigasi */}
           <div className="flex flex-col gap-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">
-              Kawasan Wisata
+              Navigasi Utama
             </h4>
             <ul className="flex flex-col gap-2.5">
-              {footerLinks.destinasiPopuler.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link
+                  href="/homestay"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Jelajah Homestay
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/kategori/semua"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Kategori Penginapan
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/promo"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Promo & Voucher
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/panduan-jogja"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Panduan Wisata Jogja
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/cek-reservasi"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Cek Status Reservasi
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Column 3: Kategori */}
+          {/* Column 3: Kategori Penginapan */}
           <div className="flex flex-col gap-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">
-              Kategori Penginapan
+              Kategori Pilihan
             </h4>
             <ul className="flex flex-col gap-2.5">
-              {footerLinks.kategori.map((link) => (
-                <li key={link.label}>
+              {categories.map((cat) => (
+                <li key={cat.slug}>
                   <Link
-                    href={link.href}
+                    href={`/kategori/${cat.slug}`}
                     className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
                   >
-                    {link.label}
+                    {cat.name}
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/kategori/semua"
+                  className="text-xs text-[#ffdbcf] font-medium hover:underline transition-colors mt-0.5 inline-block"
+                >
+                  Lihat Semua Kategori →
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Column 4: Dukungan & Host */}
+          {/* Column 4: Bantuan & Kontak */}
           <div className="flex flex-col gap-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">
-              Dukungan & Mitra
+              Layanan Tamu
             </h4>
             <ul className="flex flex-col gap-2.5">
-              {footerLinks.dukungan.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link
+                  href="/tentang-kami"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Tentang Kami
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/cek-reservasi"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Lacak Reservasi
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/hubungi-kami"
+                  className="text-xs text-zinc-400 hover:text-[#ffdbcf] transition-colors"
+                >
+                  Hubungi Kami
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="https://wa.me/6285795445463?text=Halo%20Admin%20adakamar.id,%20saya%20butuh%20bantuan%20seputar%20pemesanan%20homestay."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors flex items-center gap-1.5 mt-1"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>WhatsApp Concierge</span>
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -143,19 +199,30 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-400">
           <p className="flex items-center gap-1.5">
-            © {new Date().getFullYear()} adakamar.id — Dibuat dengan <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> untuk Jogja Istimewa.
+            © {new Date().getFullYear()} adakamar.id — Platform Booking Homestay Terkurasi Yogyakarta.
           </p>
 
-          <div className="flex items-center gap-6">
-            <Link href="/kebijakan-privasi" className="hover:text-white transition-colors">
-              Privasi
+          <div className="flex flex-wrap items-center gap-5">
+            <Link href="/" className="hover:text-white transition-colors">
+              Beranda
             </Link>
-            <Link href="/syarat-ketentuan" className="hover:text-white transition-colors">
-              Ketentuan
+            <Link href="/homestay" className="hover:text-white transition-colors">
+              Homestay
             </Link>
-            <Link href="/bantuan" className="hover:text-white transition-colors">
-              Pusat Bantuan
+            <Link href="/panduan-jogja" className="hover:text-white transition-colors">
+              Panduan
             </Link>
+            <Link href="/cek-reservasi" className="hover:text-white transition-colors">
+              Cek Reservasi
+            </Link>
+            <a
+              href="https://wa.me/6285795445463"
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+            >
+              CS WhatsApp
+            </a>
           </div>
         </div>
       </div>

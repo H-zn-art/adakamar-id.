@@ -18,9 +18,11 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
+  ChevronLeft,
   ChevronRight,
   Grid3X3,
 } from "lucide-react";
+import { useHorizontalScroll } from "@/lib/useHorizontalScroll";
 
 // ── Icon map ────────────────────────────────────────────────────────
 const iconMap: Record<string, React.ElementType> = {
@@ -83,6 +85,26 @@ export default function CategoryPage({
 
   // All categories for sidebar/pills
   const [allCategories, setAllCategories] = useState<any[]>([]);
+
+  const {
+    scrollRef: catScrollRef,
+    canScrollLeft: catCanScrollLeft,
+    canScrollRight: catCanScrollRight,
+    hasMovedRef: catHasMovedRef,
+    scroll: catScroll,
+    checkScroll: catCheckScroll,
+    onMouseDown: catOnMouseDown,
+    onMouseMove: catOnMouseMove,
+    onMouseUp: catOnMouseUp,
+    onMouseLeave: catOnMouseLeave,
+  } = useHorizontalScroll();
+
+  useEffect(() => {
+    if (allCategories.length > 0) {
+      const timer = setTimeout(catCheckScroll, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [allCategories, catCheckScroll]);
 
   // Properties for this category
   const [properties, setProperties] = useState<any[]>([]);
@@ -259,7 +281,7 @@ export default function CategoryPage({
                 )}
                 <div className="absolute inset-0 bg-gradient-to-r from-surface-container-low via-surface-container-low/95 to-transparent" />
 
-                <div className="relative z-10 p-6 md:p-10 lg:p-12 flex flex-col gap-6 max-w-3xl">
+                <div className="relative z-10 p-6 md:p-10 lg:p-12 flex flex-col gap-6 w-full max-w-4xl">
                   {/* Badge */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-terracotta-soft text-primary text-xs font-semibold uppercase tracking-wider shadow-sm">
@@ -319,30 +341,77 @@ export default function CategoryPage({
 
                   {/* Category pills — other categories */}
                   {allCategories.length > 0 && (
-                    <div className="flex items-center gap-2 pt-2 overflow-x-auto pb-1 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                      <Link
-                        href="/kategori/semua"
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all ${
-                          slug === "semua" || slug === "all"
-                            ? "bg-primary text-on-primary shadow-sm"
-                            : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-sm"
-                        }`}
+                    <div className="relative flex items-center w-full max-w-full group mt-1">
+                      {/* Tombol Geser Kiri */}
+                      {catCanScrollLeft && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20 flex items-center pr-3 bg-gradient-to-r from-surface-container-low via-surface-container-low/95 to-transparent h-full">
+                          <button
+                            type="button"
+                            onClick={() => catScroll("left")}
+                            aria-label="Geser kategori ke kiri"
+                            className="w-7 h-7 rounded-full bg-surface-container-lowest border border-surface-variant/40 shadow-md hover:bg-surface-container text-on-surface flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Strip Kategori (Drag & Wheel Scrollable) */}
+                      <div
+                        ref={catScrollRef}
+                        onScroll={catCheckScroll}
+                        onMouseDown={catOnMouseDown}
+                        onMouseMove={catOnMouseMove}
+                        onMouseUp={catOnMouseUp}
+                        onMouseLeave={catOnMouseLeave}
+                        className={`flex items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5 select-none cursor-grab active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden w-full ${
+                          catCanScrollLeft ? "pl-9" : ""
+                        } ${catCanScrollRight ? "pr-9" : ""}`}
                       >
-                        Semua
-                      </Link>
-                      {allCategories.map((cat) => (
                         <Link
-                          key={cat.id}
-                          href={`/kategori/${cat.slug}`}
+                          href="/kategori/semua"
+                          onClick={(e) => {
+                            if (catHasMovedRef.current) e.preventDefault();
+                          }}
                           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all ${
-                            cat.slug === slug
+                            slug === "semua" || slug === "all"
                               ? "bg-primary text-on-primary shadow-sm"
                               : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-sm"
                           }`}
                         >
-                          {cat.name}
+                          Semua
                         </Link>
-                      ))}
+                        {allCategories.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            href={`/kategori/${cat.slug}`}
+                            onClick={(e) => {
+                              if (catHasMovedRef.current) e.preventDefault();
+                            }}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                              cat.slug === slug
+                                ? "bg-primary text-on-primary shadow-sm"
+                                : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface shadow-sm"
+                            }`}
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Tombol Geser Kanan */}
+                      {catCanScrollRight && (
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center pl-3 bg-gradient-to-l from-surface-container-low via-surface-container-low/95 to-transparent h-full">
+                          <button
+                            type="button"
+                            onClick={() => catScroll("right")}
+                            aria-label="Geser kategori ke kanan"
+                            className="w-7 h-7 rounded-full bg-surface-container-lowest border border-surface-variant/40 shadow-md hover:bg-surface-container text-on-surface flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -415,8 +484,8 @@ export default function CategoryPage({
                       imageUrl={prop.images?.[0]?.imageUrl || prop.images?.[0]?.url || prop.imageUrl || prop.image}
                       image={prop.images?.[0]?.imageUrl || prop.images?.[0]?.url || prop.imageUrl || prop.image}
                       category={prop.category?.name || category.name}
-                      badge={prop.isFeatured ? "Pilihan Kurator" : (prop.category?.name || category.name)}
-                      badgeType={prop.isFeatured ? "best-seller" : "superhost"}
+                      badge={prop.category?.name || category.name}
+                      badgeType={"superhost"}
                       capacity={
                         typeof prop.capacity === "number"
                           ? `${prop.capacity} Tamu · ${prop.bedroomCount || 2} Kamar Tidur`

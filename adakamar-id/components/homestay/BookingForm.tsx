@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { inquiriesApi, propertiesApi, promosApi } from "@/lib/api";
-import { Star, AlertCircle, Loader2, MessageCircle, ShieldCheck, Tag, Check, X, Sparkles } from "lucide-react";
+import { inquiriesApi, propertiesApi, promosApi, roomTypesApi } from "@/lib/api";
+import { Star, AlertCircle, Loader2, MessageCircle, ShieldCheck, Tag, Check, X, Sparkles, BedDouble, Users, CheckCircle2 } from "lucide-react";
 
 interface BookingFormProps {
   propertyId: string;
@@ -46,6 +46,12 @@ export default function BookingForm({
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Room type states
+  const [roomTypes, setRoomTypes] = useState<any[]>([]);
+  const [selectedRoomType, setSelectedRoomType] = useState<any | null>(null);
+  const [roomTypesLoading, setRoomTypesLoading] = useState(false);
+  const [minRoomPrice, setMinRoomPrice] = useState<number | null>(null);
+
   // If server-side fetch failed (propertyId empty), resolve client-side by slug
   useEffect(() => {
     if (!propertyId && propertySlug) {
@@ -69,6 +75,34 @@ export default function BookingForm({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertySlug]);
+
+  // Fetch room types when propertyId, checkIn, or checkOut is available
+  useEffect(() => {
+    if (!propertyId) return;
+    setRoomTypesLoading(true);
+    const dateQuery = checkIn && checkOut ? { checkIn, checkOut } : undefined;
+    roomTypesApi.list(propertyId, dateQuery)
+      .then((data: any) => {
+        const types = Array.isArray(data) ? data : [];
+        setRoomTypes(types);
+        const availableOnly = types.filter((r: any) => r.isAvailable !== false && (r.availableUnits === undefined || r.availableUnits > 0));
+        if (availableOnly.length > 0) {
+          const min = Math.min(initialPrice || Infinity, ...availableOnly.map((r: any) => r.pricePerNight));
+          setMinRoomPrice(min);
+        }
+        // If current selected room is now full/unavailable, deselect it
+        if (selectedRoomType) {
+          const stillAvail = availableOnly.some((r: any) => r.id === selectedRoomType.id);
+          if (!stillAvail) {
+            setSelectedRoomType(null);
+            setError(`Tipe kamar "${selectedRoomType.name}" penuh pada tanggal yang dipilih. Silakan pilih tipe kamar lain.`);
+          }
+        }
+      })
+      .catch(() => setRoomTypes([]))
+      .finally(() => setRoomTypesLoading(false));
+  }, [propertyId, checkIn, checkOut]);
+
 
   // Active promos fetched from database
   const [availablePromos, setAvailablePromos] = useState<any[]>([]);
@@ -100,11 +134,29 @@ export default function BookingForm({
   const nights = checkIn && checkOut
     ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000))
     : 1;
-  const subtotal = price * nights;
-  const discount = originalPrice ? originalPrice * nights - subtotal : 0;
+  // Harga aktif: pakai harga kamar yang dipilih, fallback ke minRoomPrice, fallback ke property price
+  const activePrice = selectedRoomType
+    ? selectedRoomType.pricePerNight
+    : (minRoomPrice ?? price);
+  const subtotal = activePrice * nights;
+  const discount = originalPrice && !selectedRoomType ? originalPrice * nights - subtotal : 0;
   const promoDiscount = appliedPromo?.calculatedDiscount || 0;
   const finalTotal = Math.max(0, subtotal - promoDiscount);
   const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(n);
+
+  const handleSelectRoom = (room: any) => {
+    const isFull = room.isAvailable === false || (room.availableUnits !== undefined && room.availableUnits <= 0);
+    if (isFull) {
+      setError(`Tipe kamar "${room.name}" sudah penuh${checkIn && checkOut ? " pada tanggal yang dipilih" : ""}.`);
+      return;
+    }
+    setError(null);
+    setSelectedRoomType(room);
+    setPrice(room.pricePerNight);
+    setAppliedPromo(null);
+    setPromoCodeInput("");
+    setPromoMessage(null);
+  };
 
   const handleApplyPromo = async (codeToUse?: string) => {
     const code = (codeToUse || promoCodeInput).trim().toUpperCase();
@@ -157,16 +209,25 @@ export default function BookingForm({
     e.preventDefault();
     setError(null);
     if (!propertyId) { setError("Gagal memuat data penginapan. Coba refresh halaman."); return; }
+    if (roomTypes.length > 0 && !selectedRoomType) { setError("Pilih tipe kamar terlebih dahulu."); return; }
+    if (selectedRoomType) {
+      const isSelectedFull = selectedRoomType.isAvailable === false || (selectedRoomType.availableUnits !== undefined && selectedRoomType.availableUnits <= 0);
+      if (isSelectedFull) {
+        setError("Tipe kamar yang dipilih sedang penuh untuk tanggal tersebut. Silakan pilih tipe kamar lain.");
+        return;
+      }
+    }
     if (!guestName.trim()) { setError("Nama tamu wajib diisi."); return; }
     if (!guestPhone.trim()) { setError("Nomor WhatsApp wajib diisi."); return; }
     setLoading(true);
     try {
+      const roomInfo = selectedRoomType ? `\n[Kamar: ${selectedRoomType.name} - Kapasitas ${selectedRoomType.capacity} orang]` : "";
       const promoInfo = appliedPromo
         ? `[PROMO: ${appliedPromo.promo?.code || promoCodeInput} (Hemat Rp ${fmt(promoDiscount)}) - Total: Rp ${fmt(finalTotal)}]`
         : `[Total Estimasi: Rp ${fmt(subtotal)}]`;
       const combinedNotes = notes.trim()
-        ? `${notes.trim()}\n${promoInfo}`
-        : promoInfo;
+        ? `${notes.trim()}${roomInfo}\n${promoInfo}`
+        : `${roomInfo.trim()}\n${promoInfo}`.trim();
 
       const res = await inquiriesApi.create({
         propertyId,
@@ -176,6 +237,8 @@ export default function BookingForm({
         checkOutDate: checkOut || undefined,
         guestCount,
         notes: combinedNotes,
+        roomTypeName: selectedRoomType?.name || undefined,
+        roomTypeId: selectedRoomType?.id || undefined,
       });
       if (res?.whatsappUrl) {
         // If promo applied, append promo note to whatsapp url text if not already included
@@ -200,15 +263,21 @@ export default function BookingForm({
   return (
     <div style={{ position: "sticky", top: "120px", background: "#fff", borderRadius: "20px", boxShadow: "0 4px 24px rgba(0,0,0,0.08)", border: "1px solid #e8e7f1", overflow: "hidden" }} className="booking-widget">
       <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #e8e7f1" }}>
-        {originalPrice && (
-          <div style={{ display: "flex", gap: "6px", marginBottom: "4px" }}>
-            <span style={{ fontSize: "12px", color: "#8a726a", textDecoration: "line-through" }}>Rp {fmt(originalPrice)}</span>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#9f3c16" }}>hemat {Math.round(((originalPrice - price) / originalPrice) * 100)}%</span>
+        {/* Label di atas harga */}
+        {selectedRoomType ? (
+          <div style={{ fontSize: "11px", fontWeight: 600, color: "#9f3c16", marginBottom: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+            <BedDouble style={{ width: 11, height: 11 }} />
+            {selectedRoomType.name}
+          </div>
+        ) : (
+          <div style={{ fontSize: "11px", fontWeight: 600, color: "#8a726a", marginBottom: "2px" }}>
+            {roomTypes.length > 0 ? "Mulai dari" : "Harga per malam"}
           </div>
         )}
+        {/* Harga utama */}
         <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, color: "#9f3c16" }}>Rp</span>
-          <span style={{ fontSize: "32px", fontWeight: 800, color: "#9f3c16" }}>{fmt(price)}</span>
+          <span style={{ fontSize: "32px", fontWeight: 800, color: "#9f3c16" }}>{fmt(activePrice)}</span>
           <span style={{ fontSize: "14px", color: "#57423b" }}>/malam</span>
           {reviewCount > 0 && (
             <span style={{ marginLeft: "8px", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700 }}>
@@ -216,6 +285,13 @@ export default function BookingForm({
             </span>
           )}
         </div>
+        {/* Nama properti + coretan harga asli jika tidak ada room types */}
+        {!selectedRoomType && !roomTypes.length && originalPrice && originalPrice > price && (
+          <div style={{ display: "flex", gap: "6px", marginTop: "2px" }}>
+            <span style={{ fontSize: "12px", color: "#8a726a", textDecoration: "line-through" }}>Rp {fmt(originalPrice)}</span>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#9f3c16" }}>hemat {Math.round(((originalPrice - price) / originalPrice) * 100)}%</span>
+          </div>
+        )}
         {propertyName && <div style={{ fontSize: "12px", color: "#57423b", marginTop: "4px", fontWeight: 500 }}>{propertyName}</div>}
       </div>
 
@@ -230,6 +306,105 @@ export default function BookingForm({
             <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} min={checkIn || new Date().toISOString().split("T")[0]} style={{ fontSize: "13px", fontWeight: 600, border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }} />
           </div>
         </div>
+
+        {/* Room Type Selection */}
+        {roomTypesLoading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e8e7f1", marginBottom: "12px", fontSize: "12px", color: "#57423b" }}>
+            <Loader2 style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }} />
+            Memuat tipe kamar...
+          </div>
+        ) : roomTypes.length > 0 ? (
+          <div style={{ marginBottom: "12px" }}>
+            {/* Label + required hint */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <div style={{ fontSize: "10px", fontWeight: 700, color: "#57423b", textTransform: "uppercase", display: "flex", alignItems: "center", gap: "5px" }}>
+                <BedDouble style={{ width: 12, height: 12 }} />
+                Pilih Tipe Kamar
+                <span style={{ color: "#e74c3c", fontSize: "11px" }}>*</span>
+              </div>
+              {!selectedRoomType && (
+                <span style={{ fontSize: "10px", color: "#9f3c16", fontWeight: 600, background: "#fff7f4", border: "1px solid #ffdbcf", borderRadius: "6px", padding: "2px 7px" }}>
+                  Wajib dipilih
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {roomTypes.map((room: any) => {
+                const isFull = room.isAvailable === false || (room.availableUnits !== undefined && room.availableUnits <= 0);
+                const isSelected = selectedRoomType?.id === room.id;
+                const remainingUnits = room.availableUnits !== undefined ? room.availableUnits : (room.totalUnits || 1);
+
+                return (
+                  <button
+                    key={room.id}
+                    type="button"
+                    disabled={isFull}
+                    onClick={() => !isFull && handleSelectRoom(room)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      borderRadius: "12px",
+                      border: isFull
+                        ? "1.5px dashed #cbd5e1"
+                        : isSelected
+                        ? "2px solid #9f3c16"
+                        : "1.5px solid #e8e7f1",
+                      background: isFull
+                        ? "#f8fafc"
+                        : isSelected
+                        ? "#fff7f4"
+                        : "#fff",
+                      cursor: isFull ? "not-allowed" : "pointer",
+                      opacity: isFull ? 0.72 : 1,
+                      transition: "all 0.15s",
+                      position: "relative",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: isFull ? "#64748b" : isSelected ? "#9f3c16" : "#1a1b22", display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          {isSelected && <CheckCircle2 style={{ width: 14, height: 14, color: "#9f3c16", flexShrink: 0 }} />}
+                          <span style={{ textDecoration: isFull ? "line-through" : "none" }}>{room.name}</span>
+                          
+                          {/* Badge Ketersediaan / Stok Unit */}
+                          {isFull ? (
+                            <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "6px", background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }}>
+                              Kamar Penuh
+                            </span>
+                          ) : remainingUnits === 1 ? (
+                            <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "6px", background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                              Sisa 1 kamar
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "6px", background: "#d1fae5", color: "#065f46", border: "1px solid #a7f3d0" }}>
+                              {remainingUnits} unit tersedia
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "3px" }}>
+                          <span style={{ fontSize: "11px", color: isFull ? "#94a3b8" : "#57423b", display: "flex", alignItems: "center", gap: "3px" }}>
+                            <Users style={{ width: 10, height: 10 }} />
+                            {room.capacity} orang
+                          </span>
+                          {room.facilities && (
+                            <span style={{ fontSize: "11px", color: isFull ? "#94a3b8" : "#8a726a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "140px" }}>
+                              {room.facilities}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: "13px", fontWeight: 800, color: isFull ? "#94a3b8" : "#9f3c16" }}>Rp {fmt(room.pricePerNight)}</div>
+                        <div style={{ fontSize: "10px", color: isFull ? "#94a3b8" : "#8a726a" }}>/malam</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div style={{ padding: "10px 14px", borderRadius: "10px", border: "1.5px solid #e8e7f1", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -415,7 +590,9 @@ export default function BookingForm({
         {checkIn && checkOut && nights > 0 && (
           <div style={{ background: "#f4f2fd", borderRadius: "10px", padding: "12px 14px", marginBottom: "14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-              <span style={{ fontSize: "12px", color: "#57423b" }}>Rp {fmt(price)} x {nights} malam</span>
+              <span style={{ fontSize: "12px", color: "#57423b" }}>
+                {selectedRoomType ? `${selectedRoomType.name} ` : ""}Rp {fmt(activePrice)} × {nights} malam
+              </span>
               <span style={{ fontSize: "12px", fontWeight: 600 }}>Rp {fmt(subtotal)}</span>
             </div>
             {discount > 0 && (

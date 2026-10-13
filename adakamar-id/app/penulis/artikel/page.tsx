@@ -61,7 +61,7 @@ function mapBackendArticle(item: any): ArticleData {
     thumbnail:
       item.thumbnailUrl ||
       "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800",
-    author: item.author?.name || "Sekar Ayu Kinanti",
+    author: item.author?.name || "Penulis",
     category: item.category?.name || "Budaya & Tradisi",
     status: mapBackendStatusToFrontend(item.status),
     date: item.publishedAt

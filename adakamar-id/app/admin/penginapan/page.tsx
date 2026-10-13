@@ -3,7 +3,8 @@
 import AdminSidebar from "@/components/layout/AdminSidebar";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { propertiesApi, locationsApi, categoriesApi, facilitiesApi, articlesApi } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { propertiesApi, locationsApi, categoriesApi, facilitiesApi, articlesApi, roomTypesApi } from "@/lib/api";
 import {
   Plus,
   Download,
@@ -26,9 +27,15 @@ import {
   FileUp,
   Image as ImageIcon,
   Check,
+  BedDouble,
 } from "lucide-react";
 
+function fmtRp(n: number) {
+  return new Intl.NumberFormat("id-ID").format(n || 0);
+}
+
 export default function AdminPenginapanPage() {
+  const router = useRouter();
   const [homestays, setHomestays] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [areaFilter, setAreaFilter] = useState("all");
@@ -44,12 +51,7 @@ export default function AdminPenginapanPage() {
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Media Picker and Direct Upload state
-  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
-  const [mediaPickerTarget, setMediaPickerTarget] = useState<"cover" | "gallery">("cover");
-  const [mediaPickerSearch, setMediaPickerSearch] = useState("");
-  const [mediaGalleryList, setMediaGalleryList] = useState<any[]>([]);
-  const [loadingMediaGallery, setLoadingMediaGallery] = useState(false);
+  // Direct Upload state
   const [directUploading, setDirectUploading] = useState(false);
   const directCoverFileRef = useRef<HTMLInputElement>(null);
   const directGalleryFileRef = useRef<HTMLInputElement>(null);
@@ -76,6 +78,89 @@ export default function AdminPenginapanPage() {
   };
   const [formProp, setFormProp] = useState(initialForm);
 
+  // Inline room type entries for create mode
+  const initialRoomType = { name: "", capacity: 2, totalUnits: 1, pricePerNight: 500000, facilityNames: [] as string[], isAvailable: true, imageUrls: [] as string[] };
+  type RoomTypeEntry = typeof initialRoomType;
+  const [formRoomTypes, setFormRoomTypes] = useState<RoomTypeEntry[]>([{ ...initialRoomType }]);
+
+  const addRoomTypeRow = () => setFormRoomTypes((prev) => [...prev, { ...initialRoomType }]);
+  const removeRoomTypeRow = (idx: number) => setFormRoomTypes((prev) => prev.filter((_, i) => i !== idx));
+  const updateRoomTypeRow = (idx: number, field: keyof RoomTypeEntry, value: any) =>
+    setFormRoomTypes((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  const toggleRoomFacility = (idx: number, name: string) =>
+    setFormRoomTypes((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const already = r.facilityNames.includes(name);
+      return { ...r, facilityNames: already ? r.facilityNames.filter((n) => n !== name) : [...r.facilityNames, name] };
+    }));
+
+  // Sinkronisasi otomatis Bagian 2 (Harga Mulai Dari & Kapasitas) dari Tipe Kamar
+  const syncFromRoomTypes = () => {
+    const validRooms = formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0);
+    if (validRooms.length > 0) {
+      const minPrice = Math.min(...validRooms.map((r) => r.pricePerNight));
+      const totalUnits = validRooms.reduce((acc, r) => acc + (Number(r.totalUnits) || 1), 0);
+      const totalCapacity = validRooms.reduce((acc, r) => acc + (Number(r.capacity) || 2) * (Number(r.totalUnits) || 1), 0);
+      setFormProp((prev) => ({
+        ...prev,
+        price: minPrice,
+        bedroomCount: totalUnits,
+        capacity: totalCapacity,
+      }));
+    }
+  };
+
+  // Jalankan auto-sync saat formRoomTypes berubah di mode tambah baru
+  useEffect(() => {
+    if (!editingProperty && isAddModalOpen) {
+      const validRooms = formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0);
+      if (validRooms.length > 0) {
+        const minPrice = Math.min(...validRooms.map((r) => r.pricePerNight));
+        const totalUnits = validRooms.reduce((acc, r) => acc + (Number(r.totalUnits) || 1), 0);
+        const totalCapacity = validRooms.reduce((acc, r) => acc + (Number(r.capacity) || 2) * (Number(r.totalUnits) || 1), 0);
+        setFormProp((prev) => ({
+          ...prev,
+          price: minPrice,
+          bedroomCount: totalUnits,
+          capacity: totalCapacity,
+        }));
+      }
+    }
+  }, [formRoomTypes, editingProperty, isAddModalOpen]);
+
+  const [roomPhotoUploading, setRoomPhotoUploading] = useState<number | null>(null);
+  const roomPhotoInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleRoomPhotoUpload = async (file: File | undefined, idx: number) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("error", "Pilih file berformat gambar."); return; }
+    setRoomPhotoUploading(idx);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data?.url) {
+        // Append to imageUrls array (multiple photos per room)
+        setFormRoomTypes((prev) => prev.map((r, i) =>
+          i === idx ? { ...r, imageUrls: [...r.imageUrls, data.url] } : r
+        ));
+        showToast("success", "✓ Foto kamar berhasil diunggah!");
+      } else {
+        showToast("error", data?.error || "Gagal mengunggah foto.");
+      }
+    } catch {
+      showToast("error", "Gagal mengunggah foto kamar.");
+    } finally {
+      setRoomPhotoUploading(null);
+    }
+  };
+
+  const removeRoomPhoto = (roomIdx: number, photoIdx: number) =>
+    setFormRoomTypes((prev) => prev.map((r, i) =>
+      i === roomIdx ? { ...r, imageUrls: r.imageUrls.filter((_, pi) => pi !== photoIdx) } : r
+    ));
+
   const showToast = (type: "success" | "error", text: string) => {
     setToastMessage({ type, text });
     setTimeout(() => setToastMessage(null), 3500);
@@ -85,8 +170,6 @@ export default function AdminPenginapanPage() {
   const totalAll = homestays.length;
   const totalAktif = homestays.filter((h) => h.status === "active").length;
   const totalNonaktif = homestays.filter((h) => h.status === "inactive").length;
-  const uniqueAreasCount = new Set(homestays.map((h) => h.area)).size;
-  const totalFeatured = homestays.filter((h) => h.featured).length;
   const reviewedHomestays = homestays.filter((h) => h.reviews > 0 && typeof h.rating === "number");
   const totalReviewsCount = reviewedHomestays.reduce((s, h) => s + h.reviews, 0);
   const avgRating = totalReviewsCount > 0
@@ -178,83 +261,6 @@ export default function AdminPenginapanPage() {
         showToast("error", `Gagal hapus: ${err?.message || "Cek koneksi backend"}`);
       }
     }
-  };
-
-  const handleToggleFeatured = async (id: string, current: boolean) => {
-    try {
-      await propertiesApi.update(id, { isFeatured: !current });
-      setHomestays((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, featured: !current } : h))
-      );
-      showToast("success", `Status kurator penginapan berhasil diperbarui.`);
-    } catch (err: any) {
-      showToast("error", `Gagal mengubah status kurator: ${err?.message || "Cek koneksi backend"}`);
-    }
-  };
-
-  const openMediaPicker = async (target: "cover" | "gallery" = "cover") => {
-    setMediaPickerTarget(target);
-    setMediaPickerOpen(true);
-    setLoadingMediaGallery(true);
-    try {
-      const [propsRes, artsRes, uploadsRes] = await Promise.all([
-        propertiesApi.listAdminAll({ limit: 100 }).catch(() => ({ data: [] })),
-        articlesApi.findAllForAdmin().catch(() => ({ data: [] })),
-        fetch("/api/upload").then((r) => r.json()).catch(() => ({ files: [] })),
-      ]);
-
-      const list: { id: string; name: string; url: string; category: string }[] = [];
-
-      // Add local uploads
-      if (uploadsRes?.files && Array.isArray(uploadsRes.files)) {
-        uploadsRes.files.forEach((f: any) => {
-          list.push({
-            id: `upload-${f.filename}`,
-            name: f.filename,
-            url: f.url,
-            category: "Unggahan Lokal",
-          });
-        });
-      }
-
-      // Add homestay photos
-      if (propsRes?.data && Array.isArray(propsRes.data)) {
-        propsRes.data.forEach((p: any) => {
-          if (Array.isArray(p.images)) {
-            p.images.forEach((img: any, idx: number) => {
-              if (img.imageUrl && !list.some((it) => it.url === img.imageUrl)) {
-                list.push({
-                  id: `prop-${p.id}-${idx}`,
-                  name: p.name,
-                  url: img.imageUrl,
-                  category: p.category?.name || "Homestay",
-                });
-              }
-            });
-          }
-        });
-      }
-
-      setMediaGalleryList(list);
-    } catch {
-      showToast("error", "Gagal memuat galeri foto.");
-    } finally {
-      setLoadingMediaGallery(false);
-    }
-  };
-
-  const handleSelectMediaPhoto = (url: string) => {
-    if (mediaPickerTarget === "cover") {
-      setFormProp((prev) => ({ ...prev, imageUrl: url }));
-      showToast("success", "✓ Foto sampul utama berhasil dipilih!");
-    } else {
-      setFormProp((prev) => {
-        if (prev.additionalImages.includes(url)) return prev;
-        return { ...prev, additionalImages: [...prev.additionalImages, url] };
-      });
-      showToast("success", "✓ Foto ditambahkan ke galeri penginapan!");
-    }
-    setMediaPickerOpen(false);
   };
 
   const handleDirectUpload = async (file: File | undefined, target: "cover" | "gallery") => {
@@ -401,15 +407,39 @@ export default function AdminPenginapanPage() {
       if (editingProperty) {
         await propertiesApi.update(editingProperty.id, payload);
         showToast("success", `✓ Data penginapan "${formProp.name}" berhasil diperbarui!`);
+        setIsAddModalOpen(false);
+        setEditingProperty(null);
+        setFormProp(initialForm);
+        await loadProperties();
       } else {
-        await propertiesApi.create(payload);
-        showToast("success", `✓ Penginapan "${formProp.name}" berhasil ditambahkan ke database!`);
+        const newProp = await propertiesApi.create(payload);
+        if (newProp?.id) {
+          // Buat semua tipe kamar yang diisi
+          const validRooms = formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0);
+          if (validRooms.length > 0) {
+            await Promise.allSettled(
+              validRooms.map((r, idx) =>
+                roomTypesApi.create(newProp.id, {
+                  name: r.name.trim(),
+                  capacity: Number(r.capacity) || 2,
+                  totalUnits: Number(r.totalUnits) || 1,
+                  pricePerNight: Number(r.pricePerNight),
+                  facilities: r.facilityNames.length > 0 ? r.facilityNames.join(", ") : undefined,
+                  isAvailable: r.isAvailable,
+                  sortOrder: idx + 1,
+                  imageUrls: r.imageUrls.length > 0 ? r.imageUrls : undefined,
+                })
+              )
+            );
+          }
+        }
+        setIsAddModalOpen(false);
+        setEditingProperty(null);
+        setFormProp(initialForm);
+        setFormRoomTypes([{ ...initialRoomType }]);
+        await loadProperties();
+        showToast("success", `✓ Penginapan "${formProp.name}" berhasil ditambahkan!`);
       }
-
-      setIsAddModalOpen(false);
-      setEditingProperty(null);
-      setFormProp(initialForm);
-      await loadProperties();
     } catch (err: any) {
       showToast("error", `Gagal menyimpan penginapan: ${err?.message || "Cek koneksi backend"}`);
     } finally {
@@ -474,7 +504,7 @@ export default function AdminPenginapanPage() {
           </div>
 
           {/* Top KPIs Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <div className="p-6 rounded-3xl bg-white border border-zinc-200/80 shadow-xs flex items-center justify-between hover:shadow-md transition-all">
               <div>
                 <span className="text-[10px] text-zinc-400 uppercase font-extrabold tracking-wider">
@@ -494,22 +524,6 @@ export default function AdminPenginapanPage() {
             <div className="p-6 rounded-3xl bg-white border border-zinc-200/80 shadow-xs flex items-center justify-between hover:shadow-md transition-all">
               <div>
                 <span className="text-[10px] text-zinc-400 uppercase font-extrabold tracking-wider">
-                  Kawasan Terjangkau
-                </span>
-                <p className="text-3xl font-extrabold text-amber-700 mt-1">{uniqueAreasCount} Area</p>
-                <span className="text-xs text-amber-700 flex items-center gap-1 mt-1.5 font-semibold">
-                  <MapPin className="w-3.5 h-3.5" />
-                  Tersebar di DIY
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center shadow-xs">
-                <MapPin className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-white border border-zinc-200/80 shadow-xs flex items-center justify-between hover:shadow-md transition-all">
-              <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-extrabold tracking-wider">
                   Nonaktif / Renovasi
                 </span>
                 <p className="text-3xl font-extrabold text-rose-700 mt-1">{totalNonaktif}</p>
@@ -519,21 +533,6 @@ export default function AdminPenginapanPage() {
               </div>
               <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center shadow-xs">
                 <AlertCircle className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-white border border-zinc-200/80 shadow-xs flex items-center justify-between hover:shadow-md transition-all">
-              <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-extrabold tracking-wider">
-                  Pilihan Istimewa
-                </span>
-                <p className="text-3xl font-extrabold text-[#9f3c16] mt-1">{totalFeatured}</p>
-                <span className="text-xs text-[#9f3c16] font-semibold mt-1.5 block">
-                  Unggulan di Homepage
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-[#ffdbcf]/60 text-[#9f3c16] flex items-center justify-center shadow-xs">
-                <Sparkles className="w-6 h-6" />
               </div>
             </div>
           </div>
@@ -586,7 +585,7 @@ export default function AdminPenginapanPage() {
                     <th className="px-5 py-3.5">Properti</th>
                     <th className="px-4 py-3.5">Tipe & Wilayah</th>
                     <th className="px-4 py-3.5">Harga / Malam</th>
-                    <th className="px-4 py-3.5">Rating</th>
+                    <th className="px-4 py-3.5">Ulasan</th>
                     <th className="px-4 py-3.5">Status</th>
                     <th className="px-5 py-3.5 text-right">Aksi</th>
                   </tr>
@@ -614,16 +613,6 @@ export default function AdminPenginapanPage() {
                               <h4 className="font-bold text-zinc-900 text-xs leading-snug">
                                 {item.name}
                               </h4>
-                              {item.featured && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleFeatured(item.id, item.featured)}
-                                  className="inline-block mt-0.5 text-[10px] text-[#9f3c16] bg-[#ffdbcf] hover:bg-[#ffdbcf]/80 px-1.5 py-0.5 rounded font-bold cursor-pointer transition-colors"
-                                  title="Klik untuk mengubah status Pilihan Kurator"
-                                >
-                                  ★ Pilihan Kurator
-                                </button>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -641,11 +630,10 @@ export default function AdminPenginapanPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5">
-                          {item.reviews > 0 && item.rating !== null ? (
-                            <span className="font-bold text-zinc-900 flex items-center gap-1">
-                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                              {Number(item.rating).toFixed(1)}{" "}
-                              <span className="text-zinc-400 font-normal">({item.reviews})</span>
+                          {item.reviews > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-[11px] font-semibold">
+                              <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>rate_review</span>
+                              {item.reviews} ulasan
                             </span>
                           ) : (
                             <span className="text-zinc-400 text-[11px] font-medium italic">
@@ -675,6 +663,13 @@ export default function AdminPenginapanPage() {
                               target="_blank"
                             >
                               <Eye className="w-4 h-4" />
+                            </Link>
+                            <Link
+                              href={`/admin/penginapan/${item.id}/kamar`}
+                              className="p-1.5 rounded-lg hover:bg-blue-50 text-zinc-400 hover:text-blue-600 transition-colors"
+                              title="Kelola Tipe Kamar"
+                            >
+                              <BedDouble className="w-4 h-4" />
                             </Link>
                             <button
                               type="button"
@@ -778,6 +773,8 @@ export default function AdminPenginapanPage() {
 
             {/* Modal Body - Scrollable Form */}
             <form onSubmit={handleSubmitProperty} className="p-6 overflow-y-auto space-y-6 text-xs text-zinc-700">
+
+
               {/* Bagian 1: Identitas & Kategori Penginapan */}
               <div className="p-5 rounded-2xl bg-zinc-50/60 border border-zinc-200/60 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-200/50">
@@ -786,7 +783,7 @@ export default function AdminPenginapanPage() {
                     Informasi & Kategori Penginapan
                   </span>
                   <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-                    Langkah 1/3
+                    Langkah 1/4
                   </span>
                 </div>
 
@@ -870,35 +867,76 @@ export default function AdminPenginapanPage() {
                 </div>
               </div>
 
-              {/* Bagian 2: Harga & Kapasitas */}
+              {/* Bagian 2: Tarif Display Katalog & Ringkasan Unit */}
               <div className="p-5 rounded-2xl bg-zinc-50/60 border border-zinc-200/60 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-zinc-200/50">
-                  <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    Harga & Kapasitas Menginap
-                  </span>
-                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-                    Langkah 2/3
+                  <div>
+                    <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      Tarif Display Katalog & Ringkasan Unit
+                    </span>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      Menentukan tampilan awal kartu penginapan di katalog. Harga "Mulai Dari" & jumlah kamar otomatis membaca Tipe Kamar.
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider shrink-0 ml-2">
+                    Langkah 2/4
                   </span>
                 </div>
 
+                {/* Banner Sinkronisasi Otomatis jika mode tambah baru */}
+                {!editingProperty && (
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200/80 text-[11px] text-emerald-800">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                      {formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0).length > 0 ? (
+                        <>
+                          Otomatis sinkron dengan <b>{formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0).length} tipe kamar</b> di Langkah 4 (Tarif terendah: <b>Rp {fmtRp(formProp.price)}</b>)
+                        </>
+                      ) : (
+                        <>Tarif "Mulai Dari" & total unit kamar akan <b>otomatis terisi</b> saat Anda mengisi Tipe Kamar di Langkah 4.</>
+                      )}
+                    </span>
+                    {formRoomTypes.filter((r) => r.name.trim() && r.pricePerNight > 0).length > 0 && (
+                      <button
+                        type="button"
+                        onClick={syncFromRoomTypes}
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline shrink-0 ml-2 cursor-pointer"
+                        title="Klik untuk menyinkronkan ulang tarif terendah dan total unit"
+                      >
+                        Sinkronkan Ulang
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="font-semibold text-zinc-800 block mb-1">
-                      Harga Per Malam (Rp) *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-zinc-800 text-xs">
+                        Harga Display "Mulai Dari" (Rp) <span className="text-[#9f3c16]">*</span>
+                      </label>
+                      {!editingProperty && formRoomTypes.some((r) => r.name.trim() && r.pricePerNight > 0) && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                          ✓ Otomatis dari kamar
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="number"
                       required
-                      min={50000}
+                      min={0}
                       value={formProp.price}
                       onChange={(e) => setFormProp({ ...formProp, price: Number(e.target.value) })}
                       className="w-full h-10 px-3.5 rounded-xl bg-white border border-zinc-300 text-xs text-zinc-900 font-bold focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
                     />
+                    <p className="text-[10px] text-zinc-400 mt-1">
+                      Ditampilkan sebagai <i>"Mulai dari Rp {fmtRp(formProp.price)}/malam"</i> di katalog.
+                    </p>
                   </div>
                   <div>
-                    <label className="font-semibold text-zinc-800 block mb-1">
-                      Harga Coret / Normal (Rp)
+                    <label className="font-semibold text-zinc-800 block mb-1 text-xs">
+                      Harga Coret / Normal Tampilan (Rp)
                     </label>
                     <input
                       type="number"
@@ -906,50 +944,56 @@ export default function AdminPenginapanPage() {
                       value={formProp.originalPrice || ""}
                       onChange={(e) => setFormProp({ ...formProp, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
                       className="w-full h-10 px-3.5 rounded-xl bg-white border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
-                      placeholder="Opsional untuk diskon"
+                      placeholder="Opsional untuk menampilkan diskon"
                     />
+                    <p className="text-[10px] text-zinc-400 mt-1">
+                      Jika diisi lebih tinggi, harga ini akan dicoret di kartu pencarian.
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="font-semibold text-zinc-800 block mb-1">
-                      Maks. Tamu
+                    <label className="font-semibold text-zinc-800 block mb-1 text-[11px]">
+                      Total Unit Kamar
                     </label>
                     <input
                       type="number"
                       min={1}
-                      max={50}
-                      value={formProp.capacity}
-                      onChange={(e) => setFormProp({ ...formProp, capacity: Number(e.target.value) })}
-                      className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-300 text-xs text-center font-bold focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-semibold text-zinc-800 block mb-1">
-                      Kamar Tidur
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
+                      max={100}
                       value={formProp.bedroomCount}
                       onChange={(e) => setFormProp({ ...formProp, bedroomCount: Number(e.target.value) })}
                       className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-300 text-xs text-center font-bold focus:outline-none"
                     />
+                    <p className="text-[10px] text-zinc-400 mt-1 text-center">Akumulasi kamar</p>
                   </div>
                   <div>
-                    <label className="font-semibold text-zinc-800 block mb-1">
+                    <label className="font-semibold text-zinc-800 block mb-1 text-[11px]">
+                      Total Kapasitas Tamu
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={formProp.capacity}
+                      onChange={(e) => setFormProp({ ...formProp, capacity: Number(e.target.value) })}
+                      className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-300 text-xs text-center font-bold focus:outline-none"
+                    />
+                    <p className="text-[10px] text-zinc-400 mt-1 text-center">Total daya tampung</p>
+                  </div>
+                  <div>
+                    <label className="font-semibold text-zinc-800 block mb-1 text-[11px]">
                       Kamar Mandi
                     </label>
                     <input
                       type="number"
                       min={1}
-                      max={20}
+                      max={50}
                       value={formProp.bathroomCount}
                       onChange={(e) => setFormProp({ ...formProp, bathroomCount: Number(e.target.value) })}
                       className="w-full h-10 px-3 rounded-xl bg-white border border-zinc-300 text-xs text-center font-bold focus:outline-none"
                     />
+                    <p className="text-[10px] text-zinc-400 mt-1 text-center">Fasilitas mandi</p>
                   </div>
                 </div>
               </div>
@@ -962,7 +1006,7 @@ export default function AdminPenginapanPage() {
                     Fasilitas, Kontak & Media Foto
                   </span>
                   <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-                    Langkah 3/3
+                    Langkah 3/4
                   </span>
                 </div>
 
@@ -1037,141 +1081,161 @@ export default function AdminPenginapanPage() {
                   </div>
                 )}
 
-                {/* Foto Utama Listing */}
+                {/* ─── Foto Utama Homestay ─── */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-zinc-800 text-xs">
-                      Foto Utama Listing (Sampul) <span className="text-[#9f3c16]">*</span>
-                    </label>
+                    <div>
+                      <label className="font-semibold text-zinc-800 text-xs block">
+                        Foto Utama Homestay <span className="text-[#9f3c16]">*</span>
+                      </label>
+                      <span className="text-[10px] text-zinc-400">Tampilan eksterior/depan homestay — 1 foto utama</span>
+                    </div>
                     <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openMediaPicker("cover")}
-                        className="px-2.5 py-1 rounded-lg bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                      >
-                        <FolderPlus className="w-3.5 h-3.5" />
-                        <span>Pilih dari Galeri</span>
-                      </button>
                       <button
                         type="button"
                         onClick={() => directCoverFileRef.current?.click()}
                         disabled={directUploading}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-[#ffdbcf]/60 hover:text-[#9f3c16] text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                       >
                         {directUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
-                        <span>Upload File</span>
+                        <span>Upload Foto Sampul</span>
                       </button>
-                      <input
-                        type="file"
-                        ref={directCoverFileRef}
-                        accept="image/*"
+                      <input type="file" ref={directCoverFileRef} accept="image/*"
                         onChange={(e) => handleDirectUpload(e.target.files?.[0], "cover")}
-                        className="hidden"
-                      />
+                        className="hidden" />
                     </div>
                   </div>
 
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: /uploads/media-..., https://..."
-                    value={formProp.imageUrl}
-                    onChange={(e) => setFormProp({ ...formProp, imageUrl: e.target.value })}
-                    className="w-full h-10 px-3.5 rounded-xl bg-white border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30 font-mono"
-                  />
-                  <p className="text-[10px] text-zinc-400">
-                    Mendukung tautan foto lokal (/uploads/...), link web lengkap (http://...), maupun link Cloudinary/Unsplash.
-                  </p>
-
-                  {formProp.imageUrl && (
-                    <div className="mt-2 flex items-center gap-3 p-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/80">
-                      <div className="w-20 h-14 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100 shrink-0">
-                        <img
-                          src={formProp.imageUrl}
-                          alt="Preview Foto Utama"
-                          className="w-full h-full object-cover"
-                          onError={(e: any) => {
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400";
-                          }}
-                        />
+                  {/* Preview foto utama */}
+                  {formProp.imageUrl ? (
+                    <div className="relative group rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-200 aspect-video max-h-44">
+                      <img
+                        src={formProp.imageUrl}
+                        alt="Foto Utama Homestay"
+                        className="w-full h-full object-cover"
+                        onError={(e: any) => { e.currentTarget.src = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400"; }}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-end p-3">
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[11px] font-semibold bg-black/50 px-2 py-1 rounded-lg">
+                          Foto Utama Homestay
+                        </span>
                       </div>
-                      <div className="min-w-0 text-xs">
-                        <span className="font-bold text-zinc-900 block truncate">Foto Utama Terpasang</span>
-                        <span className="text-[11px] text-zinc-500 font-mono block truncate mt-0.5">{formProp.imageUrl}</span>
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold mt-1">✓ Siap Ditampilkan</span>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormProp((p) => ({ ...p, imageUrl: "" }))}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] transition-colors opacity-0 group-hover:opacity-100"
+                      >✕</button>
                     </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center h-36 rounded-2xl border-2 border-dashed border-zinc-200 hover:border-[#9f3c16] bg-zinc-50 hover:bg-[#ffdbcf]/10 transition-all cursor-pointer group">
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => handleDirectUpload(e.target.files?.[0], "cover")} />
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 group-hover:bg-[#ffdbcf]/50 flex items-center justify-center mb-2 transition-colors">
+                        <FileUp className="w-5 h-5 text-zinc-400 group-hover:text-[#9f3c16]" />
+                      </div>
+                      <span className="text-xs font-semibold text-zinc-400 group-hover:text-[#9f3c16] transition-colors">Klik atau seret foto ke sini</span>
+                      <span className="text-[10px] text-zinc-300 mt-0.5">JPG, PNG, WebP — Foto eksterior homestay</span>
+                    </label>
                   )}
                 </div>
 
-                {/* Galeri Foto Tambahan */}
-                <div className="pt-3 border-t border-zinc-200/60 space-y-2">
+                {/* ─── Galeri Foto Tambahan ─── */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-semibold text-zinc-800 block text-xs">
-                        Galeri Foto Tambahan ({formProp.additionalImages?.length || 0} foto)
-                      </span>
-                      <span className="text-[10px] text-zinc-400">
-                        Foto-foto suasana kamar, fasilitas, dan area sekitar homestay.
-                      </span>
+                      <label className="font-semibold text-zinc-800 text-xs block">
+                        Galeri Foto Tambahan
+                        {(formProp.additionalImages?.length ?? 0) > 0 && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#9f3c16] text-white text-[10px] font-bold">
+                            {formProp.additionalImages.length} foto
+                          </span>
+                        )}
+                      </label>
+                      <span className="text-[10px] text-zinc-400">Foto interior, kamar, area — tampil di galeri halaman detail</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => openMediaPicker("gallery")}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        <span>Pilih dari Galeri</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => directGalleryFileRef.current?.click()}
-                        disabled={directUploading}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        <FileUp className="w-3 h-3" />
-                        <span>Upload File</span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={directGalleryFileRef}
-                        accept="image/*"
-                        onChange={(e) => handleDirectUpload(e.target.files?.[0], "gallery")}
-                        className="hidden"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      disabled={directUploading}
+                      onClick={() => directGalleryFileRef.current?.click()}
+                      className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {directUploading
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <FileUp className="w-3.5 h-3.5" />}
+                      <span>Upload Foto</span>
+                    </button>
+                    <input
+                      type="file"
+                      ref={directGalleryFileRef}
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (!files) return;
+                        Array.from(files).forEach((f) => handleDirectUpload(f, "gallery"));
+                        e.target.value = "";
+                      }}
+                    />
                   </div>
 
-                  {formProp.additionalImages && formProp.additionalImages.length > 0 ? (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-1">
-                      {formProp.additionalImages.map((imgUrl, idx) => (
-                        <div key={idx} className="relative aspect-video rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200 group">
-                          <img src={imgUrl} alt={`Galeri ${idx + 1}`} className="w-full h-full object-cover" />
+                  {(formProp.additionalImages?.length ?? 0) > 0 ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {formProp.additionalImages.map((url: string, idx: number) => (
+                        <div key={idx} className="relative group aspect-video rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100">
+                          <img
+                            src={url}
+                            alt={`Galeri ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                          />
                           <button
                             type="button"
                             onClick={() =>
-                              setFormProp((prev) => ({
+                              setFormProp((prev: typeof formProp) => ({
                                 ...prev,
-                                additionalImages: prev.additionalImages.filter((_, i) => i !== idx),
+                                additionalImages: prev.additionalImages.filter((_: string, i: number) => i !== idx),
                               }))
                             }
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
-                            title="Hapus foto ini dari galeri"
-                          >
-                            ✕
-                          </button>
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 hover:bg-rose-600 text-white flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-all"
+                          >✕</button>
+                          {idx === 0 && (
+                            <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[8px] font-bold text-center py-0.5">Pertama</span>
+                          )}
                         </div>
                       ))}
+                      {/* Inline add more button */}
+                      <label className="aspect-video rounded-xl border-2 border-dashed border-zinc-200 hover:border-[#9f3c16]/40 bg-zinc-50 hover:bg-[#ffdbcf]/10 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 text-zinc-300 hover:text-[#9f3c16]">
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (!files) return;
+                            Array.from(files).forEach((f) => handleDirectUpload(f, "gallery"));
+                            e.target.value = "";
+                          }}
+                        />
+                        <FileUp className="w-4 h-4" />
+                        <span className="text-[9px] font-bold">Tambah</span>
+                      </label>
                     </div>
                   ) : (
-                    <p className="text-[11px] text-zinc-400 italic">
-                      Belum ada foto tambahan. Klik "Pilih dari Galeri" atau "Upload File" untuk menambahkan.
-                    </p>
+                    <label className="flex flex-col items-center justify-center h-24 rounded-2xl border-2 border-dashed border-zinc-200 hover:border-[#9f3c16]/40 bg-zinc-50 hover:bg-[#ffdbcf]/10 transition-all cursor-pointer group">
+                      <input type="file" accept="image/*" multiple className="hidden"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          Array.from(files).forEach((f) => handleDirectUpload(f, "gallery"));
+                          e.target.value = "";
+                        }}
+                      />
+                      <FileUp className="w-5 h-5 text-zinc-300 group-hover:text-[#9f3c16] mb-1 transition-colors" />
+                      <span className="text-[11px] font-semibold text-zinc-400 group-hover:text-[#9f3c16] transition-colors">Klik untuk upload foto galeri (bisa lebih dari 1)</span>
+                      <span className="text-[10px] text-zinc-300 mt-0.5">JPG, PNG, WebP — Foto interior, kamar, dll</span>
+                    </label>
                   )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
                   <div>
                     <label className="font-semibold text-zinc-800 block mb-1">
                       Nomor WhatsApp Host / Reservasi
@@ -1229,27 +1293,217 @@ export default function AdminPenginapanPage() {
                   />
                 </div>
 
-                {/* Pilihan Kurator Section dengan Penjelasan Detail */}
-                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formProp.isFeatured}
-                      onChange={(e) => setFormProp({ ...formProp, isFeatured: e.target.checked })}
-                      className="w-4 h-4 accent-[#9f3c16] rounded mt-0.5 cursor-pointer"
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-bold text-zinc-900 flex items-center gap-1.5 text-xs">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                        Jadikan Rekomendasi Utama (Pilihan Kurator)
-                      </span>
-                      <p className="text-[11px] text-zinc-600 mt-1 leading-relaxed">
-                        <strong>Maksud Pilihan Kurator:</strong> Opsi ini digunakan untuk menandai properti istimewa yang telah ditinjau dan diverifikasi langsung oleh <em>Tim Kurator Adakamar</em>. Jika dicentang, unit homestay ini akan mendapatkan lencana emas <em>"Pilihan Kurator"</em> di katalog publik dan diprioritaskan tampil di halaman Beranda depan serta urutan teratas pencarian tamu.
-                      </p>
-                    </div>
-                  </label>
-                </div>
+
               </div>
+
+              {/* ── Langkah 4: Tipe Kamar (hanya mode tambah baru) ── */}
+              {!editingProperty && (
+                <div className="p-5 rounded-2xl bg-zinc-50/60 border border-zinc-200/60 space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-200/50">
+                    <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                      <BedDouble className="w-4 h-4 text-[#9f3c16]" />
+                      Tipe Kamar
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
+                      Langkah 4/4
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                    Tambahkan tipe kamar yang tersedia (misal: <b>Standar, VIP, Family</b>). Customer akan memilih salah satu tipe kamar saat booking. Tarif terendah & total unit di Langkah 2 akan <span className="font-semibold text-emerald-700">otomatis disinkronkan</span> dari daftar kamar ini.
+                  </p>
+
+                  <div className="space-y-3">
+                    {formRoomTypes.map((room, idx) => (
+                      <div key={idx} className="p-4 rounded-xl bg-white border border-zinc-200 space-y-3 relative">
+                        {/* Row header */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-zinc-700">Tipe Kamar #{idx + 1}</span>
+                          {formRoomTypes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeRoomTypeRow(idx)}
+                              className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1 transition-colors"
+                            >
+                              <X className="w-3 h-3" /> Hapus
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Nama, Kapasitas & Jumlah Unit */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="font-semibold text-zinc-700 block mb-1 text-[11px]">Nama Tipe <span className="text-[#9f3c16]">*</span></label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Contoh: Standard, VIP, Suite"
+                              value={room.name}
+                              onChange={(e) => updateRoomTypeRow(idx, "name", e.target.value)}
+                              className="w-full h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-zinc-700 block mb-1 text-[11px]">Kapasitas (orang) <span className="text-[#9f3c16]">*</span></label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={20}
+                              value={room.capacity}
+                              onChange={(e) => updateRoomTypeRow(idx, "capacity", Number(e.target.value))}
+                              className="w-full h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-zinc-700 block mb-1 text-[11px]">Jumlah Unit <span className="text-[#9f3c16]">*</span></label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={50}
+                              value={room.totalUnits}
+                              onChange={(e) => updateRoomTypeRow(idx, "totalUnits", Number(e.target.value))}
+                              className="w-full h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Harga */}
+                        <div>
+                          <label className="font-semibold text-zinc-700 block mb-1 text-[11px]">Harga/Malam (Rp) <span className="text-[#9f3c16]">*</span></label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1000}
+                            value={room.pricePerNight}
+                            onChange={(e) => updateRoomTypeRow(idx, "pricePerNight", Number(e.target.value))}
+                            className="w-full h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/30"
+                          />
+                        </div>
+
+                        {/* Foto Kamar — Multiple */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="font-semibold text-zinc-700 text-[11px]">Foto Kamar Detail</label>
+                            {room.imageUrls.length > 0 && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-200 text-zinc-600">
+                                {room.imageUrls.length} foto
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Thumbnail Grid */}
+                          {room.imageUrls.length > 0 && (
+                            <div className="grid grid-cols-3 gap-1.5 mb-2">
+                              {room.imageUrls.map((url, photoIdx) => (
+                                <div key={photoIdx} className="relative aspect-video rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100 group">
+                                  <img src={url} alt={`Foto ${photoIdx + 1}`} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeRoomPhoto(idx, photoIdx)}
+                                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 hover:bg-rose-600 text-white flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-all"
+                                  >✕</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Upload Button */}
+                          <label className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl border border-dashed border-zinc-300 hover:border-[#9f3c16] bg-zinc-50 hover:bg-[#ffdbcf]/10 text-[11px] text-zinc-400 hover:text-[#9f3c16] font-semibold cursor-pointer transition-all">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              ref={(el) => { roomPhotoInputRefs.current[idx] = el; }}
+                              onChange={(e) => handleRoomPhotoUpload(e.target.files?.[0], idx)}
+                            />
+                            {roomPhotoUploading === idx
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <FileUp className="w-3.5 h-3.5" />}
+                            {room.imageUrls.length > 0 ? "+ Tambah Foto Kamar" : "Upload Foto Kamar"}
+                          </label>
+                          <p className="text-[10px] text-zinc-400 mt-1">Bisa lebih dari 1 foto — foto detail interior kamar</p>
+                        </div>
+
+                        {/* Fasilitas Kamar — Checkbox Grid */}
+                        {availableFacilities.length > 0 && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="font-semibold text-zinc-700 text-[11px]">Fasilitas Kamar</label>
+                              {room.facilityNames.length > 0 && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9f3c16] text-white">{room.facilityNames.length} dipilih</span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {availableFacilities.map((fac: any) => {
+                                const isChecked = room.facilityNames.includes(fac.name);
+                                return (
+                                  <button
+                                    key={fac.id}
+                                    type="button"
+                                    onClick={() => toggleRoomFacility(idx, fac.name)}
+                                    className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 cursor-pointer transition-all text-center group ${
+                                      isChecked
+                                        ? "bg-[#ffdbcf]/30 border-[#9f3c16] shadow-sm"
+                                        : "bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
+                                    }`}
+                                  >
+                                    {isChecked && (
+                                      <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#9f3c16] flex items-center justify-center">
+                                        <Check className="w-2 h-2 text-white" />
+                                      </span>
+                                    )}
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                                      isChecked ? "bg-[#9f3c16] text-white" : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200"
+                                    }`}>
+                                      <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>{fac.icon || "check_circle"}</span>
+                                    </div>
+                                    <span className={`text-[9px] font-semibold leading-tight line-clamp-1 ${isChecked ? "text-[#9f3c16]" : "text-zinc-500"}`}>
+                                      {fac.name}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {room.facilityNames.length > 0 && (
+                              <button type="button" onClick={() => updateRoomTypeRow(idx, "facilityNames", [])}
+                                className="mt-1 text-[10px] text-zinc-400 hover:text-rose-500 font-medium transition-colors">
+                                × Hapus semua pilihan
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Status Ketersediaan */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateRoomTypeRow(idx, "isAvailable", !room.isAvailable)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 transition-colors duration-200 ${
+                              room.isAvailable ? "bg-[#9f3c16] border-[#9f3c16]" : "bg-zinc-200 border-zinc-200"
+                            }`}
+                          >
+                            <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform duration-200 mt-px ${
+                              room.isAvailable ? "translate-x-3.5" : "translate-x-0.5"
+                            }`} />
+                          </button>
+                          <span className="text-[11px] font-medium text-zinc-600">
+                            {room.isAvailable ? "Tersedia untuk dipesan" : "Tidak tersedia (disembunyikan)"}
+                          </span>
+                        </div>
+                      </div>
+
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addRoomTypeRow}
+                    className="w-full h-9 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-500 hover:border-[#9f3c16] hover:text-[#9f3c16] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Tambah Tipe Kamar Lainnya
+                  </button>
+                </div>
+              )}
 
               {/* Form Action Buttons */}
               <div className="pt-2 flex items-center justify-end gap-3 sticky bottom-0 bg-white/95 backdrop-blur-xs py-3 border-t border-zinc-100">
@@ -1285,182 +1539,6 @@ export default function AdminPenginapanPage() {
         </div>
       )}
 
-      {/* Media Picker Modal */}
-      {mediaPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#ffdbcf] text-[#9f3c16] flex items-center justify-center shadow-xs">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-base text-zinc-900">
-                      Pustaka Galeri Media
-                    </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#ffdbcf] text-[#9f3c16]">
-                      {mediaPickerTarget === "cover" ? "Target: Foto Sampul" : "Target: Galeri Tambahan"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Klik pada salah satu foto untuk langsung menerapkannya ke formulir penginapan.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMediaPickerOpen(false)}
-                className="w-9 h-9 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Filter & Search Bar */}
-            <div className="p-4 border-b border-zinc-100 bg-white flex flex-col sm:flex-row gap-3 items-center justify-between">
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  placeholder="Cari foto berdasarkan nama..."
-                  value={mediaPickerSearch}
-                  onChange={(e) => setMediaPickerSearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 font-medium"
-                />
-              </div>
-
-              {/* Direct upload inside picker */}
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const pickerInput = document.getElementById("picker-direct-upload-penginapan") as HTMLInputElement;
-                    pickerInput?.click();
-                  }}
-                  disabled={directUploading}
-                  className="px-4 py-2 rounded-xl bg-[#9f3c16] hover:bg-[#853010] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {directUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-                  <span>Upload Foto Baru</span>
-                </button>
-                <input
-                  id="picker-direct-upload-penginapan"
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      await handleDirectUpload(file, mediaPickerTarget);
-                      setMediaPickerOpen(false);
-                    }
-                  }}
-                  className="hidden"
-                />
-              </div>
-            </div>
-
-            {/* Grid of Images */}
-            <div className="flex-1 overflow-y-auto p-6 max-h-[60vh] bg-zinc-50/30">
-              {loadingMediaGallery ? (
-                <div className="py-20 text-center flex flex-col items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#9f3c16] mb-3" />
-                  <p className="text-xs font-medium text-zinc-500">Memuat pustaka galeri media...</p>
-                </div>
-              ) : (
-                (() => {
-                  const filtered = mediaGalleryList.filter((m) => {
-                    const matchQ =
-                      m.name.toLowerCase().includes(mediaPickerSearch.toLowerCase()) ||
-                      m.category.toLowerCase().includes(mediaPickerSearch.toLowerCase());
-                    return matchQ;
-                  });
-
-                  if (filtered.length === 0) {
-                    return (
-                      <div className="py-16 text-center">
-                        <ImageIcon className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
-                        <h4 className="text-sm font-bold text-zinc-700">Tidak ada foto ditemukan</h4>
-                        <p className="text-xs text-zinc-400 mt-1">Coba kata kunci lain atau upload foto baru dari komputer.</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {filtered.map((item) => {
-                        const isSelectedCover = mediaPickerTarget === "cover" && formProp.imageUrl === item.url;
-                        const isSelectedGallery = mediaPickerTarget === "gallery" && formProp.additionalImages.includes(item.url);
-                        const isSelected = isSelectedCover || isSelectedGallery;
-
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => handleSelectMediaPhoto(item.url)}
-                            className={`group relative rounded-2xl overflow-hidden border-2 bg-white transition-all cursor-pointer hover:shadow-md ${
-                              isSelected
-                                ? "border-[#9f3c16] ring-2 ring-[#9f3c16]/30 shadow-xs"
-                                : "border-zinc-200/80 hover:border-zinc-400"
-                            }`}
-                          >
-                            <div className="aspect-video relative overflow-hidden bg-zinc-100">
-                              <img
-                                src={item.url}
-                                alt={item.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={(e: any) => {
-                                  e.currentTarget.src = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400";
-                                }}
-                              />
-                              {isSelected && (
-                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#9f3c16] text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                                  ✓
-                                </div>
-                              )}
-                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-medium text-white truncate max-w-[85%]">
-                                {item.category}
-                              </span>
-                            </div>
-
-                            <div className="p-3">
-                              <p className="text-xs font-bold text-zinc-900 truncate" title={item.name}>
-                                {item.name}
-                              </p>
-                              <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between">
-                                <span className="text-[10px] text-zinc-400 truncate max-w-[100px]">
-                                  {item.url.startsWith("/") ? "Upload Lokal" : "Web URL"}
-                                </span>
-                                <span className="text-[11px] font-bold text-[#9f3c16] group-hover:underline">
-                                  {isSelected ? "Terpilih ✓" : "Pilih Foto"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-zinc-100 bg-white flex items-center justify-between">
-              <span className="text-xs text-zinc-400">
-                Total {mediaGalleryList.length} foto tersedia dalam galeri pustaka.
-              </span>
-              <button
-                type="button"
-                onClick={() => setMediaPickerOpen(false)}
-                className="px-5 py-2 rounded-xl border border-zinc-300 text-zinc-700 hover:bg-zinc-100 font-semibold text-xs transition-colors cursor-pointer"
-              >
-                Tutup Galeri
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -16,6 +16,23 @@ export class InquiriesController {
     return this.inquiriesService.create(dto);
   }
 
+  // Public: Tamu tracking reservasi berdasarkan kode reservasi atau nomor telepon (tanpa login)
+  @Get('track')
+  async trackByPhone(
+    @Query('phone') phone?: string,
+    @Query('query') query?: string,
+    @Query('code') code?: string,
+  ) {
+    const term = query || code || phone || '';
+    return this.inquiriesService.findByPhone(term);
+  }
+
+  // Public: Melihat nota reservasi berdasarkan ID (untuk customer)
+  @Get('nota/:id')
+  async getNotaPublic(@Param('id') id: string) {
+    return this.inquiriesService.findOnePublic(id);
+  }
+
   // Admin: Melihat daftar inquiry tamu
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -29,7 +46,7 @@ export class InquiriesController {
     return this.inquiriesService.findAll({ status, search, page: page ? +page : 1, limit: limit ? +limit : 10 });
   }
 
-  // Admin: Update status inquiry (NEW, CONTACTED, COMPLETED, CANCELLED)
+  // Admin: Update status inquiry
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id/status')

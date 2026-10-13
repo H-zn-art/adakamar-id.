@@ -13,6 +13,7 @@ import { PromosModule } from './promos/promos.module';
 import { SettingsModule } from './settings/settings.module';
 import { ArticleCategoriesModule } from './article-categories/article-categories.module';
 import { ArticleTagsModule } from './article-tags/article-tags.module';
+import { RoomTypesModule } from './room-types/room-types.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ArticleTagsModule } from './article-tags/article-tags.module';
     SettingsModule,
     ArticleCategoriesModule,
     ArticleTagsModule,
+    RoomTypesModule,
   ],
 })
 export class AppModule {}

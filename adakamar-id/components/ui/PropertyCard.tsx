@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Star, MapPin, Users, Heart, Sparkles, ShieldCheck } from "lucide-react";
+import { MapPin, Users, Sparkles, ShieldCheck } from "lucide-react";
 
 interface PropertyCardProps {
   id?: string;
@@ -11,8 +10,8 @@ interface PropertyCardProps {
   imageUrl?: string;
   imageAlt?: string;
   location: string;
-  rating: number;
-  reviewCount: number;
+  rating?: number;
+  reviewCount?: number;
   name?: string;
   title?: string;
   capacity?: string;
@@ -38,8 +37,7 @@ export default function PropertyCard({
   imageUrl,
   imageAlt,
   location,
-  rating,
-  reviewCount,
+  reviewCount = 0,
   name,
   title,
   capacity = "2-4 Tamu",
@@ -48,12 +46,9 @@ export default function PropertyCard({
   badge,
   badgeType = "tag",
   extraBadge,
-  discount,
   category,
   isSuperhost,
 }: PropertyCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
-
   const displayImage =
     image ||
     imageUrl ||
@@ -65,18 +60,19 @@ export default function PropertyCard({
   return (
     <Link
       href={`/homestay/${slug}`}
-      className="group flex flex-col no-underline text-inherit"
+      className="group flex flex-col no-underline text-inherit h-full"
     >
-      <div className="flex flex-col rounded-3xl bg-white border border-zinc-200/70 hover:border-[#9f3c16]/30 shadow-xs hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden">
+      {/* Card wrapper — flex-col + h-full ensures consistent height in a grid */}
+      <div className="flex flex-col rounded-3xl bg-white border border-zinc-200/70 hover:border-[#9f3c16]/30 shadow-xs hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden h-full">
         {/* Image Frame */}
-        <div className="relative w-full aspect-[4/3] bg-zinc-100 overflow-hidden">
+        <div className="relative w-full aspect-[4/3] bg-zinc-100 overflow-hidden shrink-0">
           <img
             src={displayImage}
             alt={displayAlt}
-            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
           />
 
-          {/* Subtle bottom scrim for image depth */}
+          {/* Subtle bottom scrim */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
           {/* Top Badges */}
@@ -108,63 +104,41 @@ export default function PropertyCard({
               </span>
             )}
           </div>
-
-          {/* Heart Wishlist Button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsLiked(!isLiked);
-            }}
-            aria-label="Simpan ke favorit"
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-zinc-950/45 hover:bg-white backdrop-blur-md border border-white/25 shadow-md flex items-center justify-center text-white hover:text-rose-500 transition-all duration-200 z-10 focus:outline-none"
-          >
-            <Heart
-              className={`w-4 h-4 transition-colors ${
-                isLiked ? "text-rose-500 fill-rose-500" : ""
-              }`}
-            />
-          </button>
         </div>
 
-        {/* Card Details */}
-        <div className="p-5 flex flex-col flex-1 justify-between gap-3">
-          <div>
-            {/* Location & Rating row */}
-            <div className="flex items-center justify-between gap-2 mb-1.5">
+        {/* Card Details — flex-1 pushes the CTA to the bottom */}
+        <div className="p-5 flex flex-col flex-1 gap-3">
+          {/* Main content grows to fill space */}
+          <div className="flex-1">
+            {/* Location row */}
+            <div className="flex items-center gap-1.5 mb-1.5">
               <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 truncate">
                 <MapPin className="w-3.5 h-3.5 shrink-0 text-[#9f3c16]" />
                 <span className="truncate">{location}</span>
               </span>
-
-              {/* Only show rating if reviewCount > 0 */}
-              {reviewCount > 0 && (
-                <div className="inline-flex items-center gap-1 shrink-0 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                  <span className="text-xs font-bold text-zinc-900">
-                    {rating.toFixed(1)}
-                  </span>
-                  <span className="text-[10px] text-zinc-500 font-medium">
-                    ({reviewCount})
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Title */}
-            <h3 className="font-bold text-sm sm:text-base text-zinc-900 group-hover:text-[#9f3c16] transition-colors line-clamp-1 leading-snug">
+            <h3 className="font-bold text-sm sm:text-base text-zinc-900 group-hover:text-[#9f3c16] transition-colors line-clamp-2 leading-snug mb-1.5">
               {displayName}
             </h3>
 
-            {/* Capacity / Facilities */}
-            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-zinc-500">
+            {/* Capacity */}
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
               <Users className="w-3.5 h-3.5 text-zinc-400" />
               <span>{capacity}</span>
             </div>
+
+            {/* Review count — no stars, just count */}
+            {reviewCount > 0 && (
+              <p className="text-[11px] text-zinc-400 mt-1">
+                {reviewCount} ulasan tamu
+              </p>
+            )}
           </div>
 
-          {/* Pricing & Booking Row */}
-          <div className="pt-3 border-t border-zinc-100 flex items-baseline justify-between">
+          {/* Pricing & CTA — always at bottom */}
+          <div className="pt-3 border-t border-zinc-100 flex items-end justify-between mt-auto">
             <div className="flex flex-col">
               {originalPrice && originalPrice > price && (
                 <span className="text-[11px] text-zinc-400 line-through">
@@ -172,15 +146,15 @@ export default function PropertyCard({
                 </span>
               )}
               <div className="flex items-baseline gap-1">
-                <span className="text-xs text-zinc-500">Mulai</span>
+                <span className="text-[11px] text-zinc-500">Mulai</span>
                 <span className="text-base font-bold text-zinc-900">
                   Rp {formatPrice(price)}
                 </span>
-                <span className="text-xs text-zinc-500">/mlm</span>
+                <span className="text-[11px] text-zinc-500">/mlm</span>
               </div>
             </div>
 
-            <span className="text-xs font-bold text-[#9f3c16] group-hover:underline underline-offset-4 flex items-center gap-0.5">
+            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#9f3c16]/8 text-[#9f3c16] text-xs font-bold group-hover:bg-[#9f3c16] group-hover:text-white transition-all duration-200">
               Detail →
             </span>
           </div>

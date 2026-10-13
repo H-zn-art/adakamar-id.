@@ -31,7 +31,26 @@ export class AuthService {
     }
 
     if (!user.isActive) {
+      if (user.role === UserRole.PENULIS) {
+        throw new UnauthorizedException(
+          'Akun Anda belum diaktifkan oleh Super Admin. Harap menunggu proses verifikasi akun sebelum dapat masuk.',
+        );
+      }
       throw new UnauthorizedException('Akun ini telah dinonaktifkan oleh administrator.');
+    }
+
+    const targetRole = loginDto.expectedRole || loginDto.role;
+    if (targetRole && user.role !== targetRole) {
+      if (targetRole === UserRole.ADMIN) {
+        throw new UnauthorizedException(
+          'Akun ini terdaftar sebagai Penulis Konten, bukan Administrator. Silakan alihkan pilihan ke tab "Penulis Jogja" untuk masuk.',
+        );
+      }
+      if (targetRole === UserRole.PENULIS) {
+        throw new UnauthorizedException(
+          'Akun ini adalah akun Administrator. Silakan alihkan pilihan ke tab "Administrator" untuk masuk.',
+        );
+      }
     }
 
     const payload = { sub: user.id, email: user.email, role: user.role };
@@ -65,20 +84,23 @@ export class AuthService {
         name: registerDto.name,
         email: registerDto.email,
         password: hashedPassword,
-        role: registerDto.role || UserRole.PENULIS,
+        role: UserRole.PENULIS,
         phone: registerDto.phone,
+        bio: registerDto.bio,
+        isActive: false, // Memerlukan aktivasi dari Super Admin
       },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        isActive: true,
         createdAt: true,
       },
     });
 
     return {
-      message: 'Registrasi berhasil',
+      message: 'Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dan aktivasi oleh Super Admin.',
       user,
     };
   }

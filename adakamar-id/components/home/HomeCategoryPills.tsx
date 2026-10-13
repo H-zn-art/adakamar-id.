@@ -13,8 +13,11 @@ import {
   Trees,
   Camera,
   Heart,
+  ChevronLeft,
+  ChevronRight,
   LucideIcon,
 } from "lucide-react";
+import { useHorizontalScroll } from "@/lib/useHorizontalScroll";
 
 interface CategoryPill {
   id: string;
@@ -69,6 +72,19 @@ function HomeCategoryPillsContent() {
   const [active, setActive] = useState(activeParam);
   const [pills, setPills] = useState<CategoryPill[] | null>(null); // null = loading
 
+  const {
+    scrollRef,
+    canScrollLeft,
+    canScrollRight,
+    hasMovedRef,
+    scroll,
+    checkScroll,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onMouseLeave,
+  } = useHorizontalScroll();
+
   useEffect(() => {
     categoriesApi
       .list()
@@ -94,7 +110,16 @@ function HomeCategoryPillsContent() {
       });
   }, []);
 
+  // Update scroll bounds whenever pills are populated
+  useEffect(() => {
+    if (pills && pills.length > 0) {
+      const timer = setTimeout(checkScroll, 80);
+      return () => clearTimeout(timer);
+    }
+  }, [pills, checkScroll]);
+
   const handleSelect = (slug: string) => {
+    if (hasMovedRef.current) return;
     setActive(slug);
     const url = slug === "semua" ? "/" : `/?kategori=${slug}`;
     router.replace(url, { scroll: false });
@@ -121,27 +146,68 @@ function HomeCategoryPillsContent() {
   }
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-      {pills.map((pill) => {
-        const isSelected = active === pill.slug || (pill.slug === "semua" && active === "semua");
-        const Icon = getCategoryIcon(pill.iconName);
-
-        return (
+    <div className="relative flex items-center w-full group">
+      {/* Tombol Geser Kiri */}
+      {canScrollLeft && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20 flex items-center pr-4 bg-gradient-to-r from-white via-white/95 to-transparent h-full">
           <button
-            key={pill.id}
             type="button"
-            onClick={() => handleSelect(pill.slug)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
-              isSelected
-                ? "bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white shadow-md font-bold scale-[1.02]"
-                : "bg-white text-zinc-700 border border-zinc-200/80 hover:border-[#9f3c16]/40 hover:bg-zinc-50 shadow-2xs"
-            }`}
+            onClick={() => scroll("left")}
+            aria-label="Geser kategori ke kiri"
+            className="w-7 h-7 rounded-full bg-white border border-zinc-200/90 shadow-md hover:bg-zinc-50 text-zinc-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
           >
-            <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-amber-200" : "text-[#9f3c16]"}`} />
-            <span>{pill.label}</span>
+            <ChevronLeft className="w-3.5 h-3.5 text-zinc-700" />
           </button>
-        );
-      })}
+        </div>
+      )}
+
+      {/* Strip Kategori (Drag & Wheel Scrollable) */}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseLeave}
+        className={`flex items-center gap-2 overflow-x-auto scroll-smooth py-1 px-0.5 select-none cursor-grab active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden w-full ${
+          canScrollLeft ? "pl-9" : ""
+        } ${canScrollRight ? "pr-9" : ""}`}
+      >
+        {pills.map((pill) => {
+          const isSelected = active === pill.slug || (pill.slug === "semua" && active === "semua");
+          const Icon = getCategoryIcon(pill.iconName);
+
+          return (
+            <button
+              key={pill.id}
+              type="button"
+              onClick={() => handleSelect(pill.slug)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
+                isSelected
+                  ? "bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white shadow-md font-bold scale-[1.02]"
+                  : "bg-white text-zinc-700 border border-zinc-200/80 hover:border-[#9f3c16]/40 hover:bg-zinc-50 shadow-2xs"
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-amber-200" : "text-[#9f3c16]"}`} />
+              <span>{pill.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tombol Geser Kanan */}
+      {canScrollRight && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-20 flex items-center pl-4 bg-gradient-to-l from-white via-white/95 to-transparent h-full">
+          <button
+            type="button"
+            onClick={() => scroll("right")}
+            aria-label="Geser kategori ke kanan"
+            className="w-7 h-7 rounded-full bg-white border border-zinc-200/90 shadow-md hover:bg-zinc-50 text-zinc-700 flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+          >
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-700" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

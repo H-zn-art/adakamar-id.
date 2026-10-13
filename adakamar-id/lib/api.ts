@@ -130,6 +130,13 @@ export const authApi = {
     return res;
   },
 
+  register: async (data: { name: string; email: string; password: string; phone?: string; bio?: string }) => {
+    return apiFetch<{ message: string; user: any }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   logout: () => {
     removeAuthToken();
   },
@@ -291,8 +298,50 @@ export const reviewsApi = {
   },
 };
 
+// ==================== ROOM TYPES API ====================
+export const roomTypesApi = {
+  // Public: Daftar tipe kamar sebuah penginapan
+  list: (propertyId: string, dates?: { checkIn?: string; checkOut?: string }) => {
+    const q = dates?.checkIn && dates?.checkOut
+      ? `?checkIn=${encodeURIComponent(dates.checkIn)}&checkOut=${encodeURIComponent(dates.checkOut)}`
+      : "";
+    return apiFetch<any[]>(`/properties/${propertyId}/room-types${q}`);
+  },
+
+  // Admin: Tambah tipe kamar
+  create: (propertyId: string, data: {
+    name: string;
+    description?: string;
+    capacity: number;
+    totalUnits?: number;
+    pricePerNight: number;
+    facilities?: string;
+    isAvailable?: boolean;
+    sortOrder?: number;
+    imageUrls?: string[];
+  }) => apiFetch<any>(`/properties/${propertyId}/room-types`, { method: "POST", body: JSON.stringify(data) }),
+
+  // Admin: Update tipe kamar
+  update: (propertyId: string, id: string, data: Partial<{
+    name: string;
+    description: string;
+    capacity: number;
+    totalUnits: number;
+    pricePerNight: number;
+    facilities: string;
+    isAvailable: boolean;
+    sortOrder: number;
+    imageUrls: string[];
+  }>) => apiFetch<any>(`/properties/${propertyId}/room-types/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  // Admin: Hapus tipe kamar
+  remove: (propertyId: string, id: string) =>
+    apiFetch<any>(`/properties/${propertyId}/room-types/${id}`, { method: "DELETE" }),
+};
+
 // ==================== FACILITIES API (FASILITAS) ====================
 export const facilitiesApi = {
+
   list: async () => {
     return apiFetch<any[]>('/facilities');
   },
@@ -596,6 +645,10 @@ export const inquiriesApi = {
     checkOutDate?: string;
     guestCount?: number;
     notes?: string;
+    /** Nama tipe kamar yang dipilih tamu */
+    roomTypeName?: string;
+    /** ID tipe kamar yang dipilih */
+    roomTypeId?: string;
   }) => {
     return apiFetch<{ inquiry: any; whatsappUrl: string }>('/inquiries', {
       method: 'POST',
@@ -627,6 +680,21 @@ export const inquiriesApi = {
     return apiFetch(`/inquiries/${id}`, {
       method: 'DELETE',
     }, 'ADMIN');
+  },
+
+  // Public: Customer tracking reservasi berdasarkan kode reservasi atau nomor telepon
+  track: async (query: string) => {
+    const clean = encodeURIComponent(query.trim());
+    return apiFetch<{ data: any[] }>(`/inquiries/track?query=${clean}`);
+  },
+  trackByPhone: async (phone: string) => {
+    const clean = encodeURIComponent(phone.trim());
+    return apiFetch<{ data: any[] }>(`/inquiries/track?query=${clean}`);
+  },
+
+  // Public: Ambil data nota berdasarkan ID inquiry (untuk halaman nota customer)
+  getNotaById: async (id: string) => {
+    return apiFetch<any>(`/inquiries/nota/${id}`);
   },
 };
 

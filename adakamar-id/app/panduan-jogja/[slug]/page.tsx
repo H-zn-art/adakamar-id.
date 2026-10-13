@@ -86,7 +86,7 @@ export default function ArticleDetailPage() {
 
   const authorName =
     article?.author?.name ||
-    (typeof article?.author === "string" ? article.author : "Kurator Mataram");
+    (typeof article?.author === "string" ? article.author : "Penulis adakamar.id");
 
   const publishDate = formatDate(article?.publishedAt || article?.createdAt);
   const categoryName =
@@ -246,7 +246,7 @@ export default function ArticleDetailPage() {
               </span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", color: "#57423b", fontWeight: 500 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: "16px", color: "#9f3c16" }}>verified</span>
-                Edisi Kurator Mataram
+                Panduan Terverifikasi
               </span>
             </div>
 
@@ -311,7 +311,7 @@ export default function ArticleDetailPage() {
                           fontWeight: 600,
                         }}
                       >
-                        Kurator Lokal
+                        Penulis
                       </span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#57423b", marginTop: "2px" }}>
@@ -468,21 +468,26 @@ export default function ArticleDetailPage() {
               {/* Tags */}
               {article.tags && article.tags.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "28px" }}>
-                  {article.tags.map((tag: any) => (
-                    <span
-                      key={tag.id || tag.name}
-                      style={{
-                        padding: "4px 12px",
-                        borderRadius: "999px",
-                        background: "#e8e7f1",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "#57423b",
-                      }}
-                    >
-                      #{tag.name}
-                    </span>
-                  ))}
+                  {article.tags.map((tag: any, idx: number) => {
+                    const tagName = tag.tag?.name || tag.name || (typeof tag === "string" ? tag : "");
+                    if (!tagName) return null;
+                    return (
+                      <span
+                        key={tag.id || idx}
+                        style={{
+                          padding: "5px 14px",
+                          borderRadius: "999px",
+                          background: "#ffdbcf",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          color: "#9f3c16",
+                          border: "1px solid #ffd0be",
+                        }}
+                      >
+                        #{tagName}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
@@ -538,7 +543,7 @@ export default function ArticleDetailPage() {
                         fontWeight: 700,
                       }}
                     >
-                      Kurator Mataram
+                      Penulis
                     </span>
                   </div>
                   {article.author?.bio && (

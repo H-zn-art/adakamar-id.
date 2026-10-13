@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Star, MessageSquarePlus, CheckCircle2, User, Loader2, Sparkles, Send } from "lucide-react";
+import { MessageSquarePlus, CheckCircle2, User, Loader2, Sparkles, Send } from "lucide-react";
 import { reviewsApi } from "@/lib/api";
 
 interface Review {
@@ -21,14 +21,6 @@ interface PropertyReviewsSectionProps {
   initialReviews?: Review[];
 }
 
-const RATING_LABELS: Record<number, string> = {
-  1: "Kecewa (1 Bintang)",
-  2: "Kurang Memuaskan (2 Bintang)",
-  3: "Cukup Baik (3 Bintang)",
-  4: "Sangat Bagus (4 Bintang)",
-  5: "Luar Biasa Sempurna! (5 Bintang)",
-};
-
 export default function PropertyReviewsSection({
   propertyId,
   propertySlug,
@@ -38,15 +30,12 @@ export default function PropertyReviewsSection({
   initialReviews = [],
 }: PropertyReviewsSectionProps) {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
-  const [rating, setRating] = useState<number>(initialRating);
   const [reviewCount, setReviewCount] = useState<number>(initialReviewCount);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   // Form states
   const [guestName, setGuestName] = useState("");
-  const [formRating, setFormRating] = useState(5);
-  const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -62,13 +51,7 @@ export default function PropertyReviewsSection({
       .then((data) => {
         if (Array.isArray(data)) {
           setReviews(data);
-          if (data.length > 0) {
-            setReviewCount(data.length);
-            const avg = Number((data.reduce((acc, r) => acc + (r.rating || 5), 0) / data.length).toFixed(1));
-            setRating(avg);
-          } else {
-            setReviewCount(0);
-          }
+          setReviewCount(data.length);
         }
       })
       .catch(() => {})
@@ -94,18 +77,16 @@ export default function PropertyReviewsSection({
       const target = propertySlug || propertyId;
       const res = await reviewsApi.create(target, {
         guestName: guestName.trim(),
-        rating: formRating,
+        rating: 5, // rating tidak ditampilkan, pakai default 5
         comment: comment.trim(),
       });
 
       if (res && res.review) {
         setReviews([res.review, ...reviews]);
-        setRating(res.newRating);
-        setReviewCount(res.reviewCount);
+        setReviewCount((c) => c + 1);
         setSuccessMsg("Terima kasih! Ulasan Anda telah berhasil diterbitkan.");
         setGuestName("");
         setComment("");
-        setFormRating(5);
         setTimeout(() => setShowForm(false), 2500);
       }
     } catch (err: any) {
@@ -125,8 +106,13 @@ export default function PropertyReviewsSection({
             <span>Pengalaman Tamu Asli</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-            Ulasan & Penilaian {propertyName}
+            Ulasan Tamu — {propertyName}
           </h2>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {reviewCount > 0
+              ? `${reviewCount} ulasan dari tamu yang pernah menginap`
+              : "Belum ada ulasan. Jadilah yang pertama!"}
+          </p>
         </div>
 
         <button
@@ -143,40 +129,6 @@ export default function PropertyReviewsSection({
         </button>
       </div>
 
-      {/* Summary Score Card */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-zinc-200/80 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#ffdbcf]/60 border border-[#ffdbcf] text-[#9f3c16] flex flex-col items-center justify-center font-bold">
-            <span className="text-2xl font-black leading-none">
-              {reviewCount > 0 ? rating.toFixed(1) : "—"}
-            </span>
-            <span className="text-[10px] text-[#9f3c16] font-semibold mt-0.5">/ 5.0</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`w-4 h-4 ${
-                    reviewCount > 0 && star <= Math.round(rating)
-                      ? "fill-amber-400 text-amber-500"
-                      : "text-zinc-300"
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="text-sm font-bold text-zinc-900">
-              {reviewCount > 0 ? `Rating rata-rata dari ${reviewCount} ulasan tamu` : "Belum Ada Ulasan Tamu"}
-            </div>
-            <p className="text-xs text-zinc-500">
-              {reviewCount > 0
-                ? "Semua penilaian berasal dari tamu terverifikasi yang pernah menginap."
-                : "Jadilah tamu pertama yang membagikan kesan menginap Anda di sini!"}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Write Review Form */}
       {showForm && (
         <form
@@ -184,44 +136,12 @@ export default function PropertyReviewsSection({
           className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-[#fbf8ff] to-white border-2 border-[#ffdbcf] shadow-sm mb-8 transition-all"
         >
           <h3 className="text-sm font-bold text-zinc-900 mb-1 flex items-center gap-2">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-500" />
+            <MessageSquarePlus className="w-4 h-4 text-[#9f3c16]" />
             <span>Bagikan Pengalaman Menginap Anda</span>
           </h3>
           <p className="text-xs text-zinc-500 mb-4">
-            Bantu calon tamu lain dengan memberikan penilaian dan kesan autentik Anda selama di {propertyName}.
+            Bantu calon tamu lain dengan ulasan dan kesan autentik Anda selama di {propertyName}.
           </p>
-
-          {/* Star selector */}
-          <div className="mb-4">
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-2">
-              Penilaian Bintang *
-            </label>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setFormRating(star)}
-                    onMouseEnter={() => setHoverRating(star)}
-                    onMouseLeave={() => setHoverRating(0)}
-                    className="p-1 rounded-lg hover:scale-110 transition-transform cursor-pointer focus:outline-none"
-                  >
-                    <Star
-                      className={`w-6 h-6 ${
-                        star <= (hoverRating || formRating)
-                          ? "fill-amber-400 text-amber-500"
-                          : "text-zinc-300"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              <span className="text-xs font-semibold text-zinc-700 ml-2">
-                {RATING_LABELS[hoverRating || formRating]}
-              </span>
-            </div>
-          </div>
 
           {/* Name input */}
           <div className="mb-4">
@@ -241,10 +161,10 @@ export default function PropertyReviewsSection({
           {/* Comment input */}
           <div className="mb-4">
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 mb-1.5">
-              Ulasan & Kesan Menginap *
+              Ulasan &amp; Kesan Menginap *
             </label>
             <textarea
-              rows={3}
+              rows={4}
               placeholder="Ceritakan tentang kenyamanan kamar, keramahan tuan rumah, suasana lingkungan sekitar..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -296,7 +216,7 @@ export default function PropertyReviewsSection({
       ) : reviews.length === 0 ? (
         <div className="p-8 rounded-2xl bg-zinc-50 border border-zinc-200/80 text-center flex flex-col items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-[#ffdbcf] text-[#9f3c16] flex items-center justify-center mb-3">
-            <Star className="w-6 h-6" />
+            <MessageSquarePlus className="w-6 h-6" />
           </div>
           <h4 className="text-sm font-bold text-zinc-900 mb-1">Belum Ada Ulasan</h4>
           <p className="text-xs text-zinc-500 max-w-sm mb-4">
@@ -317,32 +237,25 @@ export default function PropertyReviewsSection({
               key={rev.id}
               className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs hover:shadow-xs transition-shadow"
             >
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#9f3c16] to-[#bf542c] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
-                    {rev.guestName.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-zinc-900 leading-tight">
-                      {rev.guestName}
-                    </h4>
-                    <span className="text-[11px] text-zinc-400">
-                      {new Date(rev.createdAt).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </span>
-                  </div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#9f3c16] to-[#bf542c] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                  {rev.guestName.substring(0, 2).toUpperCase()}
                 </div>
-
-                <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200/60">
-                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-                  <span className="text-xs font-bold text-zinc-900">{rev.rating}.0</span>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-zinc-900 leading-tight">
+                    {rev.guestName}
+                  </h4>
+                  <span className="text-[11px] text-zinc-400">
+                    {new Date(rev.createdAt).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
 
-              <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed mt-2 pl-12">
+              <p className="text-xs sm:text-sm text-zinc-700 leading-relaxed pl-12">
                 {rev.comment}
               </p>
             </div>

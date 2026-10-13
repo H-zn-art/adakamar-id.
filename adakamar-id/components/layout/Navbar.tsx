@@ -16,16 +16,18 @@ import {
   BookOpen,
   Info,
   Home,
+  ClipboardList,
 } from "lucide-react";
 import { TubelightNavBar } from "@/components/ui/tubelight-navbar";
 
-// Nav items sesuai PRD & UI: Beranda, Jelajah, Kategori, Promo, Panduan, Tentang Kami
+// Nav items sesuai PRD & UI
 const navItems = [
   { name: "Beranda", url: "/", icon: Home },
   { name: "Jelajah", url: "/homestay", icon: Compass },
   { name: "Kategori", url: "/kategori/semua", icon: Tag },
   { name: "Promo", url: "/promo", icon: Sparkles },
   { name: "Panduan", url: "/panduan-jogja", icon: BookOpen },
+  { name: "Cek Reservasi", url: "/cek-reservasi", icon: ClipboardList },
   { name: "Tentang Kami", url: "/tentang-kami", icon: Info },
 ];
 

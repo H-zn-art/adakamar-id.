@@ -19,6 +19,8 @@ export class InquiriesService {
     const inquiry = await this.prisma.inquiry.create({
       data: {
         propertyId: dto.propertyId,
+        roomTypeId: dto.roomTypeId || null,
+        roomTypeName: dto.roomTypeName || null,
         guestName: dto.guestName,
         guestPhone: dto.guestPhone,
         guestEmail: dto.guestEmail,
@@ -31,6 +33,9 @@ export class InquiriesService {
       include: {
         property: {
           select: { name: true, whatsappNumber: true, price: true, slug: true },
+        },
+        roomType: {
+          select: { id: true, name: true, totalUnits: true },
         },
       },
     });
@@ -53,6 +58,7 @@ export class InquiriesService {
       `- Check-in: ${dto.checkInDate || 'Fleksibel'}\n` +
       `- Check-out: ${dto.checkOutDate || 'Fleksibel'}\n` +
       `- Jumlah Tamu: ${dto.guestCount || 2} Orang\n` +
+      (dto.roomTypeName ? `- Tipe Kamar: ${dto.roomTypeName}\n` : '') +
       (dto.notes ? `- Catatan: ${dto.notes}\n` : '') +
       `\n🏠 Penginapan yang Dipesan:\n${property.name}\n${propertyUrl}\n` +
       `\nMohon konfirmasi ketersediaan unit dan total biayanya. Matur nuwun.`;
@@ -91,6 +97,9 @@ export class InquiriesService {
           property: {
             select: { id: true, name: true, slug: true, whatsappNumber: true, price: true, originalPrice: true, address: true },
           },
+          roomType: {
+            select: { id: true, name: true, totalUnits: true },
+          },
         },
       }),
       this.prisma.inquiry.count({ where: { status: InquiryStatus.NEW } }),
@@ -120,6 +129,85 @@ export class InquiriesService {
     });
   }
 
+  async findByPhone(term: string) {
+    if (!term || !term.trim()) {
+      return { data: [] };
+    }
+
+    const trimmed = term.trim();
+
+    // 1. Cek apakah input berupa KODE RESERVASI (misal: "INQ-MM4Z5T", "MM4Z5T", atau ID inquiry)
+    const hasLetters = /[a-zA-Z]/.test(trimmed);
+    const startsWithInq = trimmed.toUpperCase().startsWith('INQ');
+
+    if (hasLetters || startsWithInq) {
+      const cleanCode = trimmed.replace(/^INQ-?/i, '').trim();
+
+      const orConditions: any[] = [
+        { id: trimmed },
+        { id: trimmed.toLowerCase() },
+      ];
+
+      if (cleanCode && cleanCode.length >= 4) {
+        orConditions.push({ id: cleanCode });
+        orConditions.push({ id: cleanCode.toLowerCase() });
+        orConditions.push({ id: { endsWith: cleanCode.toLowerCase() } });
+        orConditions.push({ id: { contains: cleanCode.toLowerCase() } });
+      }
+
+      const inquiriesByCode = await this.prisma.inquiry.findMany({
+        where: {
+          OR: orConditions,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          property: {
+            select: { id: true, name: true, slug: true, whatsappNumber: true, price: true, address: true },
+          },
+          roomType: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      if (inquiriesByCode.length > 0) {
+        return { data: inquiriesByCode };
+      }
+    }
+
+    // 2. Cek apakah input berupa NOMOR TELEPON (minimal 8 digit angka murni)
+    const clean = trimmed.replace(/[^0-9]/g, '');
+    if (clean.length >= 8) {
+      const variants = [clean];
+      if (clean.startsWith('0')) {
+        variants.push('62' + clean.substring(1)); // 08xxx -> 628xxx
+      } else if (clean.startsWith('62')) {
+        variants.push('0' + clean.substring(2)); // 628xxx -> 08xxx
+      }
+
+      const inquiriesByPhone = await this.prisma.inquiry.findMany({
+        where: {
+          OR: variants.map((v) => ({ guestPhone: { contains: v } })),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: {
+          property: {
+            select: { id: true, name: true, slug: true, whatsappNumber: true, price: true, address: true },
+          },
+          roomType: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      return { data: inquiriesByPhone };
+    }
+
+    return { data: [] };
+  }
+
   async remove(id: string) {
     const inquiry = await this.prisma.inquiry.findUnique({ where: { id } });
     if (!inquiry) {
@@ -127,5 +215,32 @@ export class InquiriesService {
     }
 
     return this.prisma.inquiry.delete({ where: { id } });
+  }
+
+  // Public: ambil satu inquiry untuk halaman nota customer
+  async findOnePublic(id: string) {
+    const inquiry = await this.prisma.inquiry.findUnique({
+      where: { id },
+      include: {
+        property: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            address: true,
+            whatsappNumber: true,
+            price: true,
+            originalPrice: true,
+            images: { where: { isCover: true }, take: 1, select: { imageUrl: true } },
+          },
+        },
+      },
+    });
+
+    if (!inquiry) {
+      throw new NotFoundException('Nota tidak ditemukan.');
+    }
+
+    return inquiry;
   }
 }

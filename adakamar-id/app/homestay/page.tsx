@@ -710,6 +710,14 @@ function HomestayCatalogContent() {
                           ? `${p.capacity} Tamu · ${p.bedroomCount || 2} Kamar Tidur`
                           : p.capacity || "4 Tamu · 2 Kamar Tidur";
 
+                      // Harga terendah = min dari harga dasar DAN harga tipe kamar tersedia
+                      const availRooms = Array.isArray(p.roomTypes)
+                        ? p.roomTypes.filter((r: any) => r.isAvailable)
+                        : [];
+                      const displayPrice = availRooms.length > 0
+                        ? Math.min(p.price || Infinity, ...availRooms.map((r: any) => r.pricePerNight))
+                        : (p.price || 0);
+
                       return (
                         <PropertyCard
                           key={p.id || p.slug}
@@ -722,14 +730,10 @@ function HomestayCatalogContent() {
                           rating={p.rating ?? 4.9}
                           reviewCount={p.reviewCount ?? 0}
                           capacity={capacityLabel}
-                          price={p.price}
-                          originalPrice={p.originalPrice}
-                          badge={
-                            p.isFeatured
-                              ? "Pilihan Kurator"
-                              : p.category?.name || "Homestay"
-                          }
-                          badgeType={p.isFeatured ? "best-seller" : "superhost"}
+                          price={displayPrice}
+                          originalPrice={availRooms.length > 0 ? undefined : p.originalPrice}
+                          badge={p.category?.name || "Homestay"}
+                          badgeType={"superhost"}
                           extraBadge={
                             locationName.toLowerCase().includes("kraton") ||
                             locationName.toLowerCase().includes("malioboro")

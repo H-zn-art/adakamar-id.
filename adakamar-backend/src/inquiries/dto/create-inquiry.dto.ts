@@ -30,4 +30,15 @@ export class CreateInquiryDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  /** Nama tipe kamar yang dipilih tamu (mis. "Kamar VIP", "Kamar Standar") */
+  @IsOptional()
+  @IsString()
+  roomTypeName?: string;
+
+  /** ID tipe kamar yang dipilih tamu */
+  @IsOptional()
+  @IsString()
+  roomTypeId?: string;
 }
+

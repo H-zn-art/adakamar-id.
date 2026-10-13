@@ -516,7 +516,10 @@ export default function BukaHomestayPage() {
                   <input type="checkbox" style={{ width: "16px", height: "16px", accentColor: "#9f3c16", cursor: "pointer", marginTop: "2px", flexShrink: 0 }} />
                   Saya menyetujui <a href="/syarat-ketentuan" style={{ color: "#9f3c16", fontWeight: 700, textDecoration: "none" }}>Syarat & Ketentuan</a> dan <a href="/kebijakan-privasi" style={{ color: "#9f3c16", fontWeight: 700, textDecoration: "none" }}>Kebijakan Privasi</a> adakamar.id.
                 </label>
-                <button
+                <a
+                  href="https://wa.me/6285795445463?text=Halo%20Admin%20adakamar.id,%20saya%20tertarik%20mendaftarkan%20properti/homestay%20saya%20untuk%20bergabung%20menjadi%20mitra."
+                  target="_blank"
+                  rel="noreferrer"
                   style={{
                     width: "100%",
                     padding: "14px",
@@ -533,11 +536,13 @@ export default function BukaHomestayPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
+                    textDecoration: "none",
+                    boxSizing: "border-box",
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>send</span>
-                  Daftarkan Properti Saya Sekarang
-                </button>
+                  <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>chat</span>
+                  Hubungi Admin via WhatsApp untuk Pendaftaran
+                </a>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "center", marginTop: "16px", fontSize: "12px", color: "#8a726a" }}>

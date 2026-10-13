@@ -32,29 +32,6 @@ const curationPillars = [
   },
 ];
 
-const teamMembers = [
-  {
-    name: "Raditya Danu",
-    role: "Pendiri & Lead Homestay Curator",
-    bio: "Arsitek lulusan UGM yang mengabdikan 12 tahun meneliti restorasi joglo lawasan di pedesaan Bantul dan Sleman.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuADrGq6rpaawrUdXlMuU7oWRBwWVqyABavUykoQQiVe_RRFL5uXf8q45E77pRaFwkIs4roxMyrOkWnKYNcxbG1XLQ7vyWtSb4qmH1pK_jK9JoXHL3CbneJQZFVyVbNRkzo4UyXw_Ss5yscEzwrt6xl7iWR3qc9-MwwZjSnSjPDtuO8yxCW5AzW4kti5AxnZ7POGg_n4xbSBSaqo7r601GrTmeSKgGki523t4HqIFJasPoT7wjmoHYvk",
-  },
-  {
-    name: "Saraswati Putri",
-    role: "Kurator Gastronomi & Pengalaman Tamu",
-    bio: "Penikmat kuliner tradisional dan pencinta teh melati tubruk. Mengurasi jamuan sarapan khas desa dan workshop membatik.",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80",
-  },
-  {
-    name: "Bagus Pratama",
-    role: "Kepala Dokumentasi & Penulis Panduan",
-    bio: "Fotografer dokumenter budaya Jawa yang telah berkeliling ratusan dusun di Daerah Istimewa Yogyakarta.",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80",
-  },
-];
 
 export default function AboutPage() {
   return (
@@ -288,52 +265,6 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Team Section */}
-        <section className="w-full bg-surface-container-low/40 py-16 px-6 lg:px-12">
-          <div className="max-w-7xl mx-auto flex flex-col gap-10">
-            <div className="text-center max-w-2xl mx-auto">
-              <span className="text-xs uppercase tracking-wider font-bold text-primary">
-                Wajah di Balik Kurasi
-              </span>
-              <h2 className="text-3xl font-bold text-on-surface mt-2">
-                Tim Kurator Mataram Kami
-              </h2>
-              <p className="text-sm text-on-surface-variant mt-1">
-                Para penikmat warisan budaya dan praktisi hospitality yang
-                berdedikasi menjaga denyut kearifan lokal Yogyakarta.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {teamMembers.map((member, i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl bg-surface-container-lowest border border-surface-variant/40 overflow-hidden p-6 shadow-sm flex flex-col items-center text-center gap-4"
-                >
-                  <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-terracotta-soft shadow-inner">
-                    <img
-                      src={member.image}
-                      alt={member.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-bold text-on-surface">
-                      {member.name}
-                    </h4>
-                    <span className="text-xs text-primary font-semibold block mt-0.5">
-                      {member.role}
-                    </span>
-                    <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
-                      {member.bio}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Final CTA */}
         <section className="w-full py-16 px-6 lg:px-12">
           <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-r from-primary to-primary-container p-8 sm:p-12 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8">
@@ -347,18 +278,24 @@ export default function AboutPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <Link
-                href="/buka-homestay"
-                className="px-6 py-3.5 rounded-xl bg-white text-primary text-xs font-bold shadow-md hover:bg-surface-container-lowest transition-colors"
+              <a
+                href="https://wa.me/6285795445463?text=Halo%20Admin%20adakamar.id,%20saya%20tertarik%20mendaftarkan%20properti/homestay%20saya%20untuk%20bergabung%20menjadi%20mitra."
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-3.5 rounded-xl bg-white text-primary text-xs font-bold shadow-md hover:bg-surface-container-lowest transition-colors flex items-center gap-1.5"
               >
-                Daftar Jadi Tuan Rumah
-              </Link>
-              <Link
-                href="/hubungi-kami"
-                className="px-6 py-3.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-md transition-colors"
+                <span className="material-symbols-outlined text-[16px]">chat</span>
+                <span>Daftar Jadi Tuan Rumah</span>
+              </a>
+              <a
+                href="https://wa.me/6285795445463?text=Halo%20Admin%20adakamar.id,%20saya%20ingin%20konsultasi%20mengenai%20rekomendasi%20homestay%20di%20Jogja."
+                target="_blank"
+                rel="noreferrer"
+                className="px-6 py-3.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur-md transition-colors flex items-center gap-1.5"
               >
-                Konsultasi Gratis
-              </Link>
+                <span className="material-symbols-outlined text-[16px]">support_agent</span>
+                <span>Konsultasi Gratis</span>
+              </a>
             </div>
           </div>
         </section>

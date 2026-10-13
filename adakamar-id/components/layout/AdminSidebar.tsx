@@ -9,7 +9,7 @@ import {
   Home,
   Waves,
   MapPin,
-  Image as ImageIcon,
+  BedDouble,
   FileText,
   FolderTree,
   Tag,
@@ -75,7 +75,7 @@ export default function AdminSidebar() {
         { label: "Fasilitas Kamar", href: "/admin/fasilitas", icon: Waves },
         { label: "Lokasi & Peta Jogja", href: "/admin/lokasi", icon: MapPin },
         { label: "Promo & Kupon", href: "/admin/promo", icon: Percent },
-        { label: "Gallery Pustaka", href: "/admin/media", icon: ImageIcon },
+        { label: "Kelola Tipe Kamar", href: "/admin/kamar", icon: BedDouble },
       ],
     },
     {
@@ -138,6 +138,10 @@ export default function AdminSidebar() {
                     ? pathname === "/admin"
                     : item.href === "/admin/artikel"
                     ? pathname === "/admin/artikel"
+                    : item.href === "/admin/penginapan"
+                    ? pathname === "/admin/penginapan" || (pathname.startsWith("/admin/penginapan") && !pathname.includes("/kamar"))
+                    : item.href === "/admin/kamar"
+                    ? pathname === "/admin/kamar" || pathname.includes("/admin/penginapan/") && pathname.endsWith("/kamar")
                     : pathname.startsWith(item.href);
 
                 const Icon = item.icon;

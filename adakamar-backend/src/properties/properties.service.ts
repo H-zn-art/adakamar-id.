@@ -111,6 +111,7 @@ export class PropertiesService {
           facilities: {
             include: { facility: true },
           },
+          roomTypes: { orderBy: [{ sortOrder: 'asc' }, { pricePerNight: 'asc' }] },
         },
       }),
     ]);
@@ -148,6 +149,7 @@ export class PropertiesService {
           category: true,
           images: { orderBy: { sortOrder: 'asc' } },
           facilities: { include: { facility: true } },
+          roomTypes: { orderBy: [{ sortOrder: 'asc' }, { pricePerNight: 'asc' }] },
         },
       }),
     ]);
@@ -162,6 +164,7 @@ export class PropertiesService {
         category: true,
         images: { orderBy: { sortOrder: 'asc' } },
         facilities: { include: { facility: true } },
+        roomTypes: { orderBy: [{ sortOrder: 'asc' }, { pricePerNight: 'asc' }] },
         reviews: { orderBy: { createdAt: 'desc' } },
       },
     });
@@ -183,6 +186,7 @@ export class PropertiesService {
         facilities: {
           include: { facility: true },
         },
+        roomTypes: { orderBy: [{ sortOrder: 'asc' }, { pricePerNight: 'asc' }] },
         reviews: {
           orderBy: { createdAt: 'desc' },
         },

@@ -18,6 +18,12 @@ export default function ContactPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
+    const text = encodeURIComponent(
+      `Halo Admin adakamar.id,\nSaya: ${formData.name}\nEmail: ${formData.email}\nNo HP: ${formData.phone || "-"}\nKategori: ${formData.category}\n\nPesan: ${formData.message}`
+    );
+    if (typeof window !== "undefined") {
+      window.open(`https://wa.me/6285795445463?text=${text}`, "_blank");
+    }
   };
 
   const copyAddress = () => {

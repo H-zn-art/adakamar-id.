@@ -15,6 +15,14 @@ function mapBackendProperty(p: any) {
       ? `${p.capacity} Tamu · ${p.bedroomCount || 2} Kamar Tidur`
       : p.capacity || "4 Tamu · 2 Kamar Tidur";
 
+  // Harga terendah = min dari harga dasar properti DAN harga semua tipe kamar tersedia
+  const availableRooms = Array.isArray(p.roomTypes)
+    ? p.roomTypes.filter((r: any) => r.isAvailable)
+    : [];
+  const minPrice = availableRooms.length > 0
+    ? Math.min(p.price || Infinity, ...availableRooms.map((r: any) => r.pricePerNight))
+    : (p.price || 0);
+
   return {
     id: p.id,
     slug: p.slug,
@@ -24,10 +32,10 @@ function mapBackendProperty(p: any) {
     rating: p.rating ?? 4.9,
     reviewCount: p.reviewCount ?? p.reviews ?? 0,
     capacity,
-    price: p.price,
-    originalPrice: p.originalPrice,
-    badge: p.isFeatured || p.featured ? "Pilihan Kurator" : (p.category?.name || p.type || "Homestay"),
-    badgeType: (p.isFeatured || p.featured ? "best-seller" : "superhost") as "best-seller" | "superhost",
+    price: minPrice,
+    originalPrice: availableRooms.length > 0 ? undefined : p.originalPrice,
+    badge: p.category?.name || p.type || "Homestay",
+    badgeType: "superhost" as "best-seller" | "superhost",
     extraBadge: location.toLowerCase().includes("kraton") || location.toLowerCase().includes("malioboro") ? "Dekat Malioboro" : undefined,
     footerTag: p.status === "ACTIVE" || p.status === "active" ? "Instan Book" : undefined,
   };

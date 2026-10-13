@@ -3,8 +3,8 @@
 import AdminSidebar from "@/components/layout/AdminSidebar";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { promosApi, propertiesApi } from "@/lib/api";
-import { ChevronRight, Plus, Ticket, Percent, Flame, Search, Edit3, Trash2, Building2, X } from "lucide-react";
+import { promosApi } from "@/lib/api";
+import { ChevronRight, Plus, Ticket, Percent, Flame, Search, Edit3, Trash2, X } from "lucide-react";
 
 interface PromoItem {
   id: string;
@@ -17,8 +17,14 @@ interface PromoItem {
   usedCount: number;
   totalQuota: number;
   validUntil: string;
+  rawEndDate?: string;
   status: "active" | "expired" | "draft";
 }
+
+const getDefaultDateStr = () => {
+  const d = new Date(Date.now() + 30 * 86400000);
+  return d.toISOString().slice(0, 10);
+};
 
 export default function AdminPromoPage() {
   const [promos, setPromos] = useState<PromoItem[]>([]);
@@ -33,11 +39,7 @@ export default function AdminPromoPage() {
   const [formMax, setFormMax] = useState(200000);
   const [formMin, setFormMin] = useState(500000);
   const [formQuota, setFormQuota] = useState(50);
-  const [formDate, setFormDate] = useState("31 Des 2025");
-  // PRD Seksi 13: Pilih Penginapan terkait promo
-  const [allProperties, setAllProperties] = useState<any[]>([]);
-  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
-  const [propertySearch, setPropertySearch] = useState("");
+  const [formDate, setFormDate] = useState(getDefaultDateStr());
 
   const loadPromos = async () => {
     try {
@@ -54,6 +56,7 @@ export default function AdminPromoPage() {
           usedCount: p.usedCount || 0,
           totalQuota: p.quota || 0,
           validUntil: p.endDate ? new Date(p.endDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
+          rawEndDate: p.endDate || "",
           status: !p.isActive ? "draft" : new Date(p.endDate) < new Date() ? "expired" : "active",
         }));
         setPromos(mapped);
@@ -68,10 +71,6 @@ export default function AdminPromoPage() {
 
   useEffect(() => {
     loadPromos();
-    // Load all properties for promo linking
-    propertiesApi.list({ limit: 200 }).then((res: any) => {
-      if (Array.isArray(res?.data)) setAllProperties(res.data);
-    }).catch(() => {});
     const handleUpdate = () => {
       loadPromos();
     };
@@ -88,9 +87,7 @@ export default function AdminPromoPage() {
     setFormMax(200000);
     setFormMin(500000);
     setFormQuota(50);
-    setFormDate("31 Des 2025");
-    setSelectedPropertyIds([]);
-    setPropertySearch("");
+    setFormDate(getDefaultDateStr());
     setModalOpen(true);
   };
 
@@ -103,16 +100,13 @@ export default function AdminPromoPage() {
     setFormMax(item.maxDiscount || 0);
     setFormMin(item.minBooking);
     setFormQuota(item.totalQuota);
-    setFormDate(item.validUntil);
-    setSelectedPropertyIds([]);
-    setPropertySearch("");
+    setFormDate(item.rawEndDate ? item.rawEndDate.slice(0, 10) : getDefaultDateStr());
     setModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      let savedPromoId = editingItem?.id || "";
       if (editingItem) {
         await promosApi.update(editingItem.id, {
           code: formCode.toUpperCase(),
@@ -121,9 +115,10 @@ export default function AdminPromoPage() {
           discountAmount: formType === "fixed" ? Number(formVal) : null,
           minTransaction: Number(formMin) || 0,
           quota: Number(formQuota) || 100,
+          endDate: formDate ? new Date(`${formDate}T23:59:59`).toISOString() : undefined,
         });
       } else {
-        const created: any = await promosApi.create({
+        await promosApi.create({
           code: formCode.toUpperCase(),
           title: formTitle,
           discountPercent: formType === "percentage" ? Number(formVal) : null,
@@ -131,15 +126,11 @@ export default function AdminPromoPage() {
           minTransaction: Number(formMin) || 0,
           quota: Number(formQuota) || 100,
           startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+          endDate: formDate
+            ? new Date(`${formDate}T23:59:59`).toISOString()
+            : new Date(Date.now() + 30 * 86400000).toISOString(),
           isActive: true,
         });
-        savedPromoId = created?.id || "";
-      }
-
-      // PRD Seksi 13: Simpan relasi promo ↔ penginapan
-      if (savedPromoId && selectedPropertyIds.length > 0) {
-        await promosApi.setPromoProperties(savedPromoId, selectedPropertyIds).catch(() => {});
       }
 
       setModalOpen(false);
@@ -522,72 +513,16 @@ export default function AdminPromoPage() {
                 </div>
                 <div>
                   <label className="font-semibold text-zinc-800 block mb-1">
-                    Masa Berlaku
+                    Masa Berlaku Sampai *
                   </label>
                   <input
-                    type="text"
+                    type="date"
+                    required
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    placeholder="31 Des 2025"
-                    className="w-full h-10 px-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:bg-white focus:outline-none text-zinc-800"
+                    className="w-full h-10 px-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:bg-white focus:outline-none text-zinc-800 cursor-pointer"
                   />
                 </div>
-              </div>
-
-              {/* PRD Seksi 13: Pilih Penginapan Terkait */}
-              <div>
-                <label className="font-semibold text-zinc-800 block mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#9f3c16]" />
-                  Penginapan Terkait
-                  <span className="text-zinc-400 font-normal">(opsional)</span>
-                </label>
-                {/* Search */}
-                <div className="relative mb-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-                  <input
-                    type="text"
-                    placeholder="Cari penginapan..."
-                    value={propertySearch}
-                    onChange={(e) => setPropertySearch(e.target.value)}
-                    className="w-full h-9 pl-9 pr-3 text-xs rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:bg-white focus:outline-none"
-                  />
-                </div>
-                {/* List */}
-                <div className="max-h-36 overflow-y-auto rounded-2xl border border-zinc-200/80 divide-y divide-zinc-100">
-                  {allProperties
-                    .filter((p) => !propertySearch || p.name?.toLowerCase().includes(propertySearch.toLowerCase()))
-                    .slice(0, 30)
-                    .map((p: any) => {
-                      const checked = selectedPropertyIds.includes(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          className="flex items-center gap-2.5 px-3.5 py-2 cursor-pointer hover:bg-zinc-50 text-xs transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() =>
-                              setSelectedPropertyIds((prev) =>
-                                checked ? prev.filter((id) => id !== p.id) : [...prev, p.id]
-                              )
-                            }
-                            className="rounded-md accent-[#9f3c16] w-3.5 h-3.5"
-                          />
-                          <span className="flex-1 truncate font-medium text-zinc-800">{p.name}</span>
-                          <span className="text-zinc-400 shrink-0 text-[11px]">{p.locationArea?.name || ""}</span>
-                        </label>
-                      );
-                    })}
-                  {allProperties.length === 0 && (
-                    <div className="px-3 py-4 text-center text-zinc-400">Belum ada penginapan</div>
-                  )}
-                </div>
-                {selectedPropertyIds.length > 0 && (
-                  <p className="text-[11px] text-[#9f3c16] font-semibold mt-1.5">
-                    ✓ {selectedPropertyIds.length} penginapan dipilih
-                  </p>
-                )}
               </div>
 
               <div className="flex justify-end gap-2.5 pt-3 border-t border-zinc-100 mt-2">

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ArticleCard from "@/components/ui/ArticleCard";
-import { articlesApi, articleCategoriesApi } from "@/lib/api";
+import { articlesApi, articleCategoriesApi, articleTagsApi } from "@/lib/api";
 
 function mapArticle(a: any) {
   const authorName =
@@ -41,6 +41,16 @@ function mapArticle(a: any) {
     author: authorName,
     date: dateFormatted,
     readTime: a.readingTime || a.readTime || "5 mnt baca",
+    tags: Array.isArray(a.tags)
+      ? a.tags
+          .map((t: any) => {
+            if (typeof t === "string") return t;
+            if (t?.tag?.name) return t.tag.name;
+            if (t?.name) return t.name;
+            return null;
+          })
+          .filter((t: any): t is string => Boolean(t))
+      : [],
   };
 }
 
@@ -57,14 +67,24 @@ export default function PanduanJogjaPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalArticles, setTotalArticles] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [trendingTags, setTrendingTags] = useState<any[]>([]);
 
-  // Fetch categories
+  // Fetch categories & trending tags
   useEffect(() => {
     articleCategoriesApi
       .list()
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setCategories(data);
+        }
+      })
+      .catch(() => {});
+
+    articleTagsApi
+      .list()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setTrendingTags(data.slice(0, 10));
         }
       })
       .catch(() => {});
@@ -304,6 +324,76 @@ export default function PanduanJogjaPage() {
           </div>
         </div>
 
+        {/* ─── Tag Filter Pills ─── */}
+        {trendingTags.length > 0 && (
+          <div
+            style={{
+              maxWidth: "1280px",
+              margin: "14px auto 0",
+              padding: "0 24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#8a726a", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Tag Populer:
+            </span>
+            {trendingTags.map((t) => {
+              const isSelected = search === t.name;
+              return (
+                <button
+                  key={t.id || t.slug}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSearchInput("");
+                      setSearch("");
+                    } else {
+                      setSearchInput(t.name);
+                      setSearch(t.name);
+                    }
+                    setPage(1);
+                  }}
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    background: isSelected ? "#9f3c16" : "#ffffff",
+                    color: isSelected ? "#ffffff" : "#9f3c16",
+                    border: isSelected ? "1px solid #9f3c16" : "1px solid #ffdbcf",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  #{t.name}
+                </button>
+              );
+            })}
+            {search && (
+              <button
+                onClick={() => {
+                  setSearchInput("");
+                  setSearch("");
+                  setPage(1);
+                }}
+                style={{
+                  fontSize: "11px",
+                  color: "#8a726a",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  marginLeft: "4px",
+                }}
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ─── Featured Article ─── */}
         {featured && page === 1 && !search && activeCategory === "semua" && (
           <section style={{ padding: "40px 0 32px" }}>
@@ -412,9 +502,28 @@ export default function PanduanJogjaPage() {
                     >
                       {featured.title}
                     </h2>
-                    <p style={{ fontSize: "15px", color: "#57423b", lineHeight: 1.65, marginBottom: "20px" }}>
+                    <p style={{ fontSize: "15px", color: "#57423b", lineHeight: 1.65, marginBottom: "14px" }}>
                       {featured.excerpt}
                     </p>
+                    {featured.tags && featured.tags.length > 0 && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "18px" }}>
+                        {featured.tags.map((t: string, idx: number) => (
+                          <span
+                            key={idx}
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              background: "#ffdbcf",
+                              color: "#9f3c16",
+                            }}
+                          >
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div
                         style={{
@@ -432,7 +541,7 @@ export default function PanduanJogjaPage() {
                       <div>
                         <div style={{ fontSize: "14px", fontWeight: 700, color: "#1a1b22" }}>{featured.author}</div>
                         <div style={{ fontSize: "12px", color: "#57423b" }}>
-                          Tim Kurator Mataram · {featured.date}
+                          Penulis · {featured.date}
                         </div>
                       </div>
                       <span

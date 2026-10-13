@@ -3,6 +3,8 @@ import Footer from "@/components/layout/Footer";
 import PropertyCard from "@/components/ui/PropertyCard";
 import BookingForm from "@/components/homestay/BookingForm";
 import PropertyReviewsSection from "@/components/homestay/PropertyReviewsSection";
+import RoomTypeGallery from "@/components/homestay/RoomTypeGallery";
+import PropertyHeroGallery from "@/components/homestay/PropertyHeroGallery";
 import { PropertyJsonLd } from "@/components/seo/SeoComponents";
 import type { Metadata } from "next";
 
@@ -38,23 +40,6 @@ export async function generateMetadata({
 
 // NOTE: amenities is now built dynamically from propertyFacilities in the page component
 
-const keistimewaan = [
-  {
-    icon: "local_dining",
-    title: "Sarapan Tradisional Tiap Hari",
-    desc: "Sarapan nasi gudeg komplet tiap Hari. Disiapkan pukul 07.00 pagi.",
-  },
-  {
-    icon: "spa",
-    title: "Afternoon Tea Tradisional",
-    desc: "Ketika & wedang panas. Mataram & Jawa kuliner.",
-  },
-  {
-    icon: "pool",
-    title: "Private Renang & Gamel",
-    desc: "Seluruh kampung wisata ini selalu dengan tamu yang menjamu.",
-  },
-];
 
 export default async function DetailPage({
   params,
@@ -82,6 +67,7 @@ export default async function DetailPage({
   let propertyWhatsapp = "";
   let propertyRules = "";
   let propertyReviews: any[] = [];
+  let propertyRoomTypes: { id: string; name: string; capacity: number; totalUnits?: number; pricePerNight: number; facilities?: string; isAvailable: boolean; images: string[] }[] = [];
   let similarProps: any[] = [];
 
   try {
@@ -120,6 +106,26 @@ export default async function DetailPage({
           }))
           .filter((f: any) => Boolean(f.name));
         propertyReviews = Array.isArray(p.reviews) ? p.reviews : [];
+        // Room types with images
+        propertyRoomTypes = (p.roomTypes || []).map((rt: any) => {
+          // imageUrls is stored as JSON array in DB — Prisma returns it as array or string
+          let imgs: string[] = [];
+          if (Array.isArray(rt.imageUrls)) {
+            imgs = rt.imageUrls.filter(Boolean);
+          } else if (typeof rt.imageUrls === "string") {
+            try { imgs = JSON.parse(rt.imageUrls).filter(Boolean); } catch { imgs = []; }
+          }
+          return {
+            id: rt.id,
+            name: rt.name,
+            capacity: Number(rt.capacity) || 2,
+            totalUnits: Number(rt.totalUnits) || 1,
+            pricePerNight: Number(rt.pricePerNight) || 0,
+            facilities: rt.facilities || "",
+            isAvailable: rt.isAvailable !== false,
+            images: imgs,
+          };
+        }).filter((rt: any) => rt.name);
         // Similar properties from API response
         similarProps = (data?.similar || []).map((s: any) => ({
           id: s.id,
@@ -143,12 +149,9 @@ export default async function DetailPage({
     // Use static defaults if API is unavailable
   }
 
-  // Fallback default image
-  const defaultImage = "https://lh3.googleusercontent.com/aida-public/AB6AXuDAMh0y4exc_o-2tbuiwa2lfJ6ZsRigJuQQB0AFIJspX9t1V7DWQKw43hPsEE_i59dcsvSGAEN0PYDBuYu5nQILzGFc4GB5jKKWaNUzBQEfXmk6-24GQjNSnVeRigY6W247oqzEC1ltO_XQ7iRu2rkhcsaNbeAIYJNOcAysw9ZdmEtHoAFtF456cjlGXCFpgY0W_5In1sodWT4k7KvxjOeWmdsN5zQx6a-mntY6vfO46Sw9FkS1vZq8";
+  // Fallback default image (only used when no images uploaded at all)
+  const defaultImage = "/placeholder-homestay.jpg";
   const mainImage = propertyImages[0] || defaultImage;
-  const thumbImages = propertyImages.length > 1
-    ? propertyImages.slice(1, 5)
-    : [defaultImage, defaultImage, defaultImage, defaultImage];
 
   // Build amenities list from DB facilities (use icon from DB directly)
   const amenities = propertyFacilities.map((f) => ({
@@ -225,63 +228,7 @@ export default async function DetailPage({
               <span style={{ color: "#dec0b7" }}>/</span>
               <span style={{ color: "#1a1b22", fontWeight: 600 }}>{propertyName}</span>
             </nav>
-            {/* Actions */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "4px 12px",
-                  borderRadius: "999px",
-                  background: "#FDF6F3",
-                  color: "#9f3c16",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>verified</span>
-                Terverifikasi
-              </span>
-              <button
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  background: "#e8e7f1",
-                  border: "none",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  color: "#1a1b22",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>share</span>
-                Bagikan
-              </button>
-              <button
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  background: "#e8e7f1",
-                  border: "none",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  color: "#1a1b22",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>favorite_border</span>
-                Simpan
-              </button>
-            </div>
+
           </div>
         </div>
 
@@ -407,122 +354,10 @@ export default async function DetailPage({
             padding: "24px 24px 0",
           }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr",
-              gap: "12px",
-              borderRadius: "20px",
-              overflow: "hidden",
-            }}
-            className="gallery-grid"
-          >
-            {/* Main image */}
-            <div
-              style={{
-                position: "relative",
-                aspectRatio: "16/10",
-                overflow: "hidden",
-                background: "#e8e7f1",
-              }}
-              className="gallery-main"
-            >
-              <img
-                src={mainImage}
-                alt={propertyName}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  background:
-                    "linear-gradient(to top, rgba(26,27,34,0.7) 0%, transparent 60%)",
-                  padding: "20px 24px",
-                }}
-              >
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "3px 10px",
-                    borderRadius: "6px",
-                    background: "rgba(0,0,0,0.4)",
-                    backdropFilter: "blur(8px)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    color: "#fff",
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                    marginBottom: "6px",
-                  }}
-                >
-                  Foto Utama
-                </span>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    color: "#ffffff",
-                    margin: 0,
-                  }}
-                >
-                  Master Joglo & Akses Plunge Pool
-                </p>
-              </div>
-            </div>
-
-            {/* 4 smaller images */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "12px",
-              }}
-              className="gallery-thumbs"
-            >
-              {thumbImages.map((src, i) => (
-                <div
-                  key={i}
-                  style={{
-                    position: "relative",
-                    aspectRatio: "4/3",
-                    overflow: "hidden",
-                    borderRadius: "12px",
-                    background: "#e8e7f1",
-                    cursor: "pointer",
-                  }}
-                >
-                  <img
-                    src={src}
-                    alt={`${propertyName} foto ${i + 2}`}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                  {i === thumbImages.length - 1 && propertyImages.length > 5 && (
-                    <button
-                      style={{
-                        position: "absolute",
-                        bottom: "10px",
-                        right: "10px",
-                        padding: "4px 12px",
-                        borderRadius: "6px",
-                        background: "rgba(255,255,255,0.92)",
-                        border: "none",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        color: "#1a1b22",
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      }}
-                    >
-                      Lihat Semua Foto ({propertyImages.length})
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <PropertyHeroGallery
+            images={propertyImages.length > 0 ? propertyImages : [defaultImage]}
+            propertyName={propertyName}
+          />
         </div>
 
         {/* ─── Main Content + Booking Widget ─── */}
@@ -643,76 +478,6 @@ export default async function DetailPage({
               ))}
             </div>
 
-            {/* Keistimewaan */}
-            <div style={{ marginBottom: "32px" }}>
-              <h2
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  color: "#1a1b22",
-                  marginBottom: "16px",
-                  letterSpacing: "-0.01em",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ color: "#9f3c16", fontSize: "22px" }}>
-                  hotel_class
-                </span>
-                Keistimewaan Menginap
-              </h2>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: "12px",
-                }}
-                className="keistimewaan-grid"
-              >
-                {keistimewaan.map((k) => (
-                  <div
-                    key={k.title}
-                    style={{
-                      display: "flex",
-                      gap: "16px",
-                      padding: "16px",
-                      borderRadius: "12px",
-                      background: "#FDF6F3",
-                      border: "1px solid #F3D5CA",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "10px",
-                        background: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <span
-                        className="material-symbols-outlined"
-                        style={{ color: "#9f3c16", fontSize: "20px" }}
-                      >
-                        {k.icon}
-                      </span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#1a1b22", marginBottom: "4px" }}>
-                        {k.title}
-                      </div>
-                      <div style={{ fontSize: "13px", color: "#57423b", lineHeight: 1.5 }}>
-                        {k.desc}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {/* Description */}
             <div style={{ marginBottom: "32px", paddingTop: "24px", borderTop: "1px solid #e8e7f1" }}>
@@ -829,6 +594,127 @@ export default async function DetailPage({
                 </div>
               )}
             </div>
+
+            {/* ── Tipe Kamar ── */}
+            {propertyRoomTypes.length > 0 && (
+              <div style={{ paddingTop: "24px", borderTop: "1px solid #e8e7f1", marginBottom: "32px" }}>
+                <h2
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    color: "#1a1b22",
+                    marginBottom: "20px",
+                    letterSpacing: "-0.01em",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ color: "#9f3c16", fontSize: "22px" }}>
+                    bed
+                  </span>
+                  Tipe Kamar
+                </h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {propertyRoomTypes.map((rt) => (
+                    <div
+                      key={rt.id}
+                      style={{
+                        borderRadius: "16px",
+                        border: "1px solid #e8e7f1",
+                        background: "#fff",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Photo strip with lightbox */}
+                      {rt.images.length > 0 && (
+                        <RoomTypeGallery images={rt.images} roomName={rt.name} />
+                      )}
+                      {/* Info */}
+                      <div style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "16px", color: "#1a1b22", marginBottom: "4px" }}>{rt.name}</div>
+                            <div style={{ display: "flex", gap: "12px", fontSize: "13px", color: "#57423b" }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: "15px", color: "#9f3c16" }}>group</span>
+                                {rt.capacity} tamu
+                              </span>
+                              {rt.isAvailable ? (
+                                <span
+                                  style={{
+                                    padding: "2px 10px",
+                                    borderRadius: "999px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    background: (rt.totalUnits || 1) === 1 ? "#fef3c7" : "#d1fae5",
+                                    color: (rt.totalUnits || 1) === 1 ? "#92400e" : "#065f46",
+                                    border: `1px solid ${(rt.totalUnits || 1) === 1 ? "#fde68a" : "#a7f3d0"}`,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>check_circle</span>
+                                  {(rt.totalUnits || 1) === 1
+                                    ? "Tersedia (Sisa 1 Kamar)"
+                                    : `Tersedia (${rt.totalUnits} Unit Kamar)`}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    padding: "2px 10px",
+                                    borderRadius: "999px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    background: "#fee2e2",
+                                    color: "#991b1b",
+                                    border: "1px solid #fecaca",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>cancel</span>
+                                  Kamar Penuh / Tidak Tersedia
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: "11px", color: "#8a726a" }}>Mulai dari</div>
+                            <div style={{ fontWeight: 800, fontSize: "18px", color: "#9f3c16" }}>
+                              Rp {rt.pricePerNight.toLocaleString("id-ID")}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#8a726a" }}>/malam</div>
+                          </div>
+                        </div>
+                        {rt.facilities && (
+                          <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                            {rt.facilities.split(",").map((f) => f.trim()).filter(Boolean).map((fac, fi) => (
+                              <span
+                                key={fi}
+                                style={{
+                                  fontSize: "11px",
+                                  padding: "3px 10px",
+                                  borderRadius: "999px",
+                                  background: "#fdf6f3",
+                                  border: "1px solid #f3d5ca",
+                                  color: "#57423b",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {fac}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Map placeholder */}
             {/* Aturan Penginapan — PRD Seksi 7 */}
@@ -1083,7 +969,6 @@ export default async function DetailPage({
           .gallery-grid { grid-template-rows: auto !important; }
           .gallery-main { aspect-ratio: 16/9 !important; }
           .gallery-thumbs { grid-template-columns: repeat(4, 1fr) !important; }
-          .keistimewaan-grid { grid-template-columns: repeat(3, 1fr) !important; }
           .amenities-grid { grid-template-columns: repeat(2, 1fr) !important; }
           .capacity-grid { grid-template-columns: repeat(4, 1fr) !important; }
           .poi-grid { grid-template-columns: repeat(4, 1fr) !important; }

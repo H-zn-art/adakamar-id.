@@ -39,18 +39,16 @@ export default function PenulisProfilePage() {
 
   // Form State
   const [formData, setFormData] = useState({
-    name: "Sekar Ayu Kinanti",
-    title: "Penulis Editorial & Budaya",
-    email: "penulis@adakamar.id",
-    phone: "+62 812-3456-7890",
-    bio: "Penikmat sastra Jawa dan pengamat arsitektur vernakular. Menjelajahi desa-desa wisata di Bantul, Kulon Progo, dan lereng Merapi untuk mendokumentasikan homestay autentik Jogja.",
-    avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500",
+    name: "",
+    title: "Penulis Konten Panduan Jogja",
+    email: "",
+    phone: "",
+    bio: "",
+    avatarUrl: "",
     specialties: [
-      "Joglo & Limasan Tradisional",
-      "Bantul & Seni Kasongan",
-      "Sleman & Lereng Merapi",
-      "Budaya & Filosofi Keraton",
-      "Kulon Progo & Perbukitan Menoreh",
+      "Wisata & Heritage Jogja",
+      "Kuliner Tradisional",
+      "Seni & Budaya",
     ],
   });
 
@@ -90,11 +88,11 @@ export default function PenulisProfilePage() {
         if (profile) {
           setFormData((prev) => ({
             ...prev,
-            name: profile.name || prev.name,
-            email: profile.email || prev.email,
-            phone: profile.phone || prev.phone,
-            bio: profile.bio || prev.bio,
-            avatarUrl: profile.avatarUrl || prev.avatarUrl,
+            name: profile.name || "",
+            email: profile.email || "",
+            phone: profile.phone || "",
+            bio: profile.bio || "",
+            avatarUrl: profile.avatarUrl || "",
           }));
         } else {
           // Fallback to localStorage
@@ -104,11 +102,11 @@ export default function PenulisProfilePage() {
               const u = JSON.parse(localUser);
               setFormData((prev) => ({
                 ...prev,
-                name: u.name || prev.name,
-                email: u.email || prev.email,
-                phone: u.phone || prev.phone,
-                bio: u.bio || prev.bio,
-                avatarUrl: u.avatarUrl || prev.avatarUrl,
+                name: u.name || "",
+                email: u.email || "",
+                phone: u.phone || "",
+                bio: u.bio || "",
+                avatarUrl: u.avatarUrl || "",
               }));
             } catch {}
           }
@@ -123,10 +121,10 @@ export default function PenulisProfilePage() {
           const totalViews = myArticles.reduce((acc, curr) => acc + (curr.views || 0), 0);
 
           setStats({
-            published: published || 6,
-            review: review || 2,
-            draft: draft || 1,
-            totalViews: totalViews || 4820,
+            published,
+            review,
+            draft,
+            totalViews,
           });
         }
       } catch (err) {
@@ -240,6 +238,17 @@ export default function PenulisProfilePage() {
     }
   };
 
+  const initials = formData.name
+    ? formData.name
+        .trim()
+        .split(" ")
+        .map((w) => w[0])
+        .filter(Boolean)
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "P";
+
   return (
     <div className="bg-[#f8f7fb] text-zinc-900 min-h-screen flex font-sans">
       <PenulisSidebar />
@@ -319,16 +328,21 @@ export default function PenulisProfilePage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
                 {/* Avatar with edit overlay */}
                 <div className="relative group shrink-0">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-4 ring-white shadow-md bg-zinc-100">
-                    <img
-                      src={formData.avatarUrl}
-                      alt={formData.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500";
-                      }}
-                    />
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-4 ring-white shadow-md bg-zinc-100 flex items-center justify-center">
+                    {formData.avatarUrl ? (
+                      <img
+                        src={formData.avatarUrl}
+                        alt={formData.name || "Foto Penulis"}
+                        className="w-full h-full object-cover"
+                        onError={() => {
+                          setFormData((prev) => ({ ...prev, avatarUrl: "" }));
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#9f3c16] via-[#bf542c] to-[#9f3c16] text-white flex items-center justify-center font-extrabold text-3xl sm:text-4xl shadow-inner select-none">
+                        {initials}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -877,32 +891,62 @@ export default function PenulisProfilePage() {
 
             {/* Preview image */}
             <div className="flex flex-col items-center gap-3">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-zinc-100 shadow-md bg-zinc-100">
-                <img
-                  src={tempPhotoUrl || formData.avatarUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500";
-                  }}
-                />
+              <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-zinc-100 shadow-md bg-zinc-100 flex items-center justify-center">
+                {tempPhotoUrl.trim() || formData.avatarUrl ? (
+                  <img
+                    src={tempPhotoUrl.trim() || formData.avatarUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#9f3c16] to-[#bf542c] text-white flex items-center justify-center font-extrabold text-2xl select-none">
+                    {initials}
+                  </div>
+                )}
               </div>
-              <span className="text-[11px] text-zinc-400">Pratinjau Foto Profil</span>
+              <span className="text-[11px] text-zinc-400">
+                {tempPhotoUrl.trim() || formData.avatarUrl
+                  ? "Pratinjau Foto Profil"
+                  : "Belum Ada Foto Profil (Menampilkan Inisial)"}
+              </span>
             </div>
 
             <div>
               <label className="text-xs font-bold text-zinc-700 block mb-1.5">
-                URL Foto Baru (Unsplash / CDN Image)
+                URL Foto Profil Baru (Tautan Gambar / CDN)
               </label>
               <input
                 type="url"
                 value={tempPhotoUrl}
                 onChange={(e) => setTempPhotoUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
+                placeholder="https://images.unsplash.com/... atau https://..."
                 className="w-full h-11 px-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 font-medium focus:outline-none focus:border-[#9f3c16] focus:bg-white transition-all"
               />
+              <p className="text-[10px] text-zinc-400 mt-1">
+                Tempelkan tautan gambar (URL) foto profil Anda.
+              </p>
             </div>
+
+            {formData.avatarUrl && (
+              <div className="flex justify-start">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setTempPhotoUrl("");
+                    setFormData((prev) => ({ ...prev, avatarUrl: "" }));
+                    await authApi.updateProfile({ avatarUrl: "" }).catch(() => {});
+                    setShowPhotoModal(false);
+                    setSaveSuccess("Foto profil dihapus. Profil kini menggunakan inisial nama.");
+                  }}
+                  className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold cursor-pointer underline"
+                >
+                  Hapus Foto (Gunakan Inisial Nama)
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
@@ -914,11 +958,12 @@ export default function PenulisProfilePage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (tempPhotoUrl.trim()) {
-                    setFormData({ ...formData, avatarUrl: tempPhotoUrl.trim() });
-                  }
+                onClick={async () => {
+                  const newUrl = tempPhotoUrl.trim();
+                  setFormData((prev) => ({ ...prev, avatarUrl: newUrl }));
+                  await authApi.updateProfile({ avatarUrl: newUrl }).catch(() => {});
                   setShowPhotoModal(false);
+                  setSaveSuccess("Foto profil berhasil diperbarui!");
                 }}
                 className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#9f3c16] hover:bg-[#853212] text-white transition-all cursor-pointer"
               >

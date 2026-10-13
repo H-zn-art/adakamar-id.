@@ -27,6 +27,7 @@ enum ArticleStatus {
 enum InquiryStatus {
   NEW
   CONTACTED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
 }
@@ -78,6 +79,7 @@ model Property {
 
   images         PropertyImage[]
   facilities     PropertyFacility[]
+  roomTypes      RoomType[]
   inquiries      Inquiry[]
   reviews        Review[]
   promos         PromoProperty[]
@@ -130,6 +132,27 @@ model PropertyFacility {
 
   @@unique([propertyId, facilityId])
   @@map("property_facilities")
+}
+
+model RoomType {
+  id            String   @id @default(cuid())
+  propertyId    String
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?  @db.Text
+  capacity      Int      @default(2)
+  totalUnits    Int      @default(1)
+  pricePerNight Int
+  facilities    String?  @db.Text
+  isAvailable   Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  imageUrls     Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inquiries     Inquiry[]
+
+  @@map("room_types")
 }
 
 model LocationArea {
@@ -269,6 +292,9 @@ model Inquiry {
   id           String        @id @default(cuid())
   propertyId   String
   property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  roomTypeId   String?
+  roomType     RoomType?     @relation(fields: [roomTypeId], references: [id], onDelete: SetNull)
+  roomTypeName String?
   guestName    String
   guestPhone   String
   guestEmail   String?

@@ -28,6 +28,17 @@ function mapBackendArticle(a: any, idx = 0) {
       })
     : "-";
 
+  const tagsList = Array.isArray(a.tags)
+    ? a.tags
+        .map((t: any) => {
+          if (typeof t === "string") return t;
+          if (t?.tag?.name) return t.tag.name;
+          if (t?.name) return t.name;
+          return null;
+        })
+        .filter((t: any): t is string => Boolean(t))
+    : [];
+
   return {
     id: a.id || a.slug,
     slug: a.slug,
@@ -46,6 +57,7 @@ function mapBackendArticle(a: any, idx = 0) {
     author: authorName,
     date: dateFormatted,
     readTime: a.readingTime || a.readTime || "5 mnt baca",
+    tags: tagsList,
   };
 }
 
@@ -93,6 +105,7 @@ export default function HomeArticlesSection() {
           author={a.author}
           date={a.date}
           readTime={a.readTime}
+          tags={a.tags}
         />
       ))}
     </div>

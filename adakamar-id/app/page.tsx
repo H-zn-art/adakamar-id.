@@ -7,6 +7,7 @@ import HomePopularHomestays from "@/components/home/HomePopularHomestays";
 import HomeNeighborhoodsSection from "@/components/home/HomeNeighborhoodsSection";
 import HomePromosSection from "@/components/home/HomePromosSection";
 import HomePropertyCount from "@/components/home/HomePropertyCount";
+import HomeHeroStats from "@/components/home/HomeHeroStats";
 import { WebsiteJsonLd } from "@/components/seo/SeoComponents";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -135,30 +136,15 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Hero Trust & Stats Capsule */}
-            <div className="inline-flex flex-wrap items-center justify-center gap-5 sm:gap-8 px-6 py-3.5 rounded-2xl bg-zinc-950/75 border border-white/15 backdrop-blur-xl text-white shadow-2xl text-xs">
-              <div className="flex items-center gap-2">
-                <Home className="w-4 h-4 text-[#ffdbcf]" />
-                <span className="font-semibold text-zinc-200">500+ Homestay Autentik</span>
-              </div>
-              <div className="hidden sm:block w-px h-3.5 bg-white/20" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-amber-400 font-bold text-sm">★</span>
-                <span className="font-semibold text-zinc-200">4.9/5 Rating Tamu</span>
-              </div>
-              <div className="hidden sm:block w-px h-3.5 bg-white/20" />
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span className="font-semibold text-zinc-200">100% Host Lokal Terverifikasi</span>
-              </div>
-            </div>
+            {/* Hero Trust & Stats Capsule — data realtime dari API */}
+            <HomeHeroStats />
           </div>
         </section>
 
         {/* ─── CATEGORY FILTER PILLS (Non-sticky modern toolbar) ─── */}
         <section className="w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 py-3.5 shadow-2xs">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-w-0 overflow-hidden">
               <HomeCategoryPills />
             </div>
 

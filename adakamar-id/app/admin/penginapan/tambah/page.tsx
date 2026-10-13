@@ -47,123 +47,56 @@ function AddEditPenginapanContent() {
   );
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
 
-  // Media Picker and Direct Upload state
-  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
-  const [mediaPickerTarget, setMediaPickerTarget] = useState<"cover" | "gallery">("cover");
-  const [mediaPickerSearch, setMediaPickerSearch] = useState("");
-  const [mediaGalleryList, setMediaGalleryList] = useState<any[]>([]);
-  const [loadingMediaGallery, setLoadingMediaGallery] = useState(false);
+  // Direct Upload state
   const [directUploading, setDirectUploading] = useState(false);
   const directCoverFileRef = useRef<HTMLInputElement>(null);
   const directGalleryFileRef = useRef<HTMLInputElement>(null);
 
-  const openMediaPicker = async (target: "cover" | "gallery" = "cover") => {
-    setMediaPickerTarget(target);
-    setMediaPickerOpen(true);
-    setMediaPickerSearch("");
-    setLoadingMediaGallery(true);
-    try {
-      const [propsRes, artsRes, uploadsRes] = await Promise.all([
-        propertiesApi.listAdminAll({ limit: 100 }).catch(() => ({ data: [] })),
-        articlesApi.findAllForAdmin().catch(() => ({ data: [] })),
-        fetch("/api/upload").then((r) => r.json()).catch(() => ({ files: [] })),
-      ]);
-
-      const list: { id: string; name: string; url: string; category: string }[] = [];
-
-      // Local uploads
-      if (uploadsRes?.files && Array.isArray(uploadsRes.files)) {
-        uploadsRes.files.forEach((f: any) => {
-          list.push({
-            id: `upload-${f.filename}`,
-            name: f.filename,
-            url: f.url,
-            category: "Unggahan Lokal",
-          });
-        });
-      }
-
-      // Properties photos
-      if (propsRes?.data && Array.isArray(propsRes.data)) {
-        propsRes.data.forEach((p: any) => {
-          if (Array.isArray(p.images)) {
-            p.images.forEach((img: any, idx: number) => {
-              if (img.imageUrl && !list.some((it) => it.url === img.imageUrl)) {
-                list.push({
-                  id: `prop-${p.id}-${idx}`,
-                  name: p.name,
-                  url: img.imageUrl,
-                  category: p.category?.name || "Homestay",
-                });
-              }
-            });
-          }
-        });
-      }
-
-      setMediaGalleryList(list);
-    } catch {
-      setSavedToast("Gagal memuat galeri media.");
-      setSavedToastType("error");
-    } finally {
-      setLoadingMediaGallery(false);
-    }
-  };
-
-  const handleSelectMediaPhoto = (url: string) => {
-    if (mediaPickerTarget === "cover") {
-      setCoverPhoto(url);
-      setSavedToast("✓ Foto sampul utama berhasil dipilih!");
-      setSavedToastType("success");
-    } else {
-      setAdditionalImages((prev) => {
-        if (prev.includes(url)) return prev;
-        return [...prev, url];
-      });
-      setSavedToast("✓ Foto ditambahkan ke galeri penginapan!");
-      setSavedToastType("success");
-    }
-    setMediaPickerOpen(false);
-  };
-
-  const handleDirectUpload = async (file: File | undefined, target: "cover" | "gallery") => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+  const handleDirectUpload = async (files: File | File[] | undefined, target: "cover" | "gallery") => {
+    if (!files) return;
+    const fileList = Array.isArray(files) ? files : [files];
+    const validFiles = fileList.filter((f) => f.type.startsWith("image/"));
+    if (validFiles.length === 0) {
       setSavedToast("Pilih file berformat gambar (JPG, PNG, WebP).");
       setSavedToastType("error");
       return;
     }
 
     setDirectUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
+    const uploaded: string[] = [];
 
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (res.ok && data?.url) {
-        if (target === "cover") {
-          setCoverPhoto(data.url);
-          setSavedToast("✓ Foto sampul berhasil diunggah & dipasang!");
-          setSavedToastType("success");
-        } else {
-          setAdditionalImages((prev) => [...prev, data.url]);
-          setSavedToast("✓ Foto berhasil diunggah & ditambahkan ke galeri!");
-          setSavedToastType("success");
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (res.ok && data?.url) {
+          uploaded.push(data.url);
+          if (validFiles.length > 1) {
+            setSavedToast(`Mengunggah foto ${i + 1}/${validFiles.length}...`);
+            setSavedToastType("success");
+          }
         }
-      } else {
-        setSavedToast(data?.error || "Gagal mengunggah foto.");
-        setSavedToastType("error");
+      } catch {
+        // continue next file
       }
-    } catch {
-      setSavedToast("Gagal mengunggah foto ke server.");
-      setSavedToastType("error");
-    } finally {
-      setDirectUploading(false);
     }
+
+    if (uploaded.length === 0) {
+      setSavedToast("Semua foto gagal diunggah. Coba lagi.");
+      setSavedToastType("error");
+    } else if (target === "cover") {
+      setCoverPhoto(uploaded[0]);
+      setSavedToast("✓ Foto sampul berhasil diunggah & dipasang!");
+      setSavedToastType("success");
+    } else {
+      setAdditionalImages((prev) => [...prev, ...uploaded]);
+      setSavedToast(`✓ ${uploaded.length} foto berhasil diunggah ke galeri!`);
+      setSavedToastType("success");
+    }
+    setDirectUploading(false);
   };
 
   const [formData, setFormData] = useState({
@@ -572,20 +505,12 @@ function AddEditPenginapanContent() {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => openMediaPicker("cover")}
-                          className="px-2.5 py-1 rounded-lg bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                        >
-                          <FolderPlus className="w-3.5 h-3.5" />
-                          <span>Pilih dari Galeri</span>
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => directCoverFileRef.current?.click()}
                           disabled={directUploading}
-                          className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-[#ffdbcf]/60 hover:text-[#9f3c16] text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
                           {directUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
-                          <span>Upload File</span>
+                          <span>Upload Foto Sampul</span>
                         </button>
                         <input
                           type="file"
@@ -644,26 +569,25 @@ function AddEditPenginapanContent() {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => openMediaPicker("gallery")}
-                          className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Pilih dari Galeri</span>
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => directGalleryFileRef.current?.click()}
                           disabled={directUploading}
-                          className="px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-[#ffdbcf]/60 hover:text-[#9f3c16] text-zinc-700 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
                           <FileUp className="w-3.5 h-3.5" />
-                          <span>Upload File</span>
+                          <span>Upload Foto Galeri</span>
                         </button>
                         <input
                           type="file"
                           ref={directGalleryFileRef}
                           accept="image/*"
-                          onChange={(e) => handleDirectUpload(e.target.files?.[0], "gallery")}
+                          multiple
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              handleDirectUpload(Array.from(files), "gallery");
+                              e.target.value = ""; // reset agar bisa unggah file yang sama lagi
+                            }
+                          }}
                           className="hidden"
                         />
                       </div>
@@ -715,10 +639,10 @@ function AddEditPenginapanContent() {
                       </div>
                       <div>
                         <h2 className="text-base font-extrabold text-zinc-950">
-                          Spesifikasi & Tarif Sewa
+                          Tarif Display Katalog & Ringkasan Unit
                         </h2>
                         <p className="text-xs text-zinc-500">
-                          Kapasitas kamar tidur, tamu, dan harga per malam
+                          Menentukan tarif "Mulai Dari" di katalog. Rincian tipe kamar (VIP, Standar, dll) dikelola di menu Kelola Kamar.
                         </p>
                       </div>
                     </div>
@@ -730,7 +654,7 @@ function AddEditPenginapanContent() {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-bold text-zinc-800 block mb-1.5">
-                        Kamar Tidur
+                        Total Unit Kamar
                       </label>
                       <input
                         type="number"
@@ -741,6 +665,7 @@ function AddEditPenginapanContent() {
                         }
                         className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none font-bold"
                       />
+                      <p className="text-[10px] text-zinc-400 mt-1">Akumulasi kamar</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-zinc-800 block mb-1.5">
@@ -755,10 +680,11 @@ function AddEditPenginapanContent() {
                         }
                         className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none font-bold"
                       />
+                      <p className="text-[10px] text-zinc-400 mt-1">Fasilitas mandi</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-zinc-800 block mb-1.5">
-                        Maks. Tamu
+                        Total Kapasitas Tamu
                       </label>
                       <input
                         type="number"
@@ -769,19 +695,20 @@ function AddEditPenginapanContent() {
                         }
                         className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none font-bold"
                       />
+                      <p className="text-[10px] text-zinc-400 mt-1">Total daya tampung</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-zinc-800 block mb-1.5">
-                        Harga Per Malam (IDR) <span className="text-[#9f3c16]">*</span>
+                        Harga Display "Mulai Dari" (IDR) <span className="text-[#9f3c16]">*</span>
                       </label>
                       <div className="relative">
                         <DollarSign className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input
                           type="number"
-                          placeholder="Contoh: 750000"
+                          placeholder="Contoh: 350000"
                           value={formData.weekdayPrice || ""}
                           onChange={(e) =>
                             setFormData({ ...formData, weekdayPrice: Number(e.target.value) })
@@ -789,16 +716,19 @@ function AddEditPenginapanContent() {
                           className="w-full h-11 pl-10 pr-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 font-bold focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16] transition-all"
                         />
                       </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">
+                        Ditampilkan sebagai harga <i>"Mulai dari Rp X/malam"</i> di kartu katalog.
+                      </p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-zinc-800 block mb-1.5">
-                        Harga Coret / Normal (IDR)
+                        Harga Coret / Normal Tampilan (IDR)
                       </label>
                       <div className="relative">
                         <DollarSign className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input
                           type="number"
-                          placeholder="Contoh: 900000"
+                          placeholder="Contoh: 500000"
                           value={formData.weekendPrice || ""}
                           onChange={(e) =>
                             setFormData({ ...formData, weekendPrice: Number(e.target.value) })
@@ -806,6 +736,9 @@ function AddEditPenginapanContent() {
                           className="w-full h-11 pl-10 pr-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 font-bold focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16] transition-all"
                         />
                       </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">
+                        Jika diisi, harga ini akan dicoret di kartu pencarian untuk promo.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1053,7 +986,7 @@ function AddEditPenginapanContent() {
                   )}
 
                   <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Foto galeri tambahan dapat dikelola kapan saja melalui formulir ini atau menu <strong>Pustaka Galeri Media</strong>.
+                    Foto galeri tambahan dapat diunggah dan dikelola langsung melalui formulir ini.
                   </p>
                 </div>
               </aside>
@@ -1061,183 +994,6 @@ function AddEditPenginapanContent() {
           )}
         </main>
       </div>
-
-      {/* Media Picker Modal */}
-      {mediaPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#ffdbcf] text-[#9f3c16] flex items-center justify-center shadow-xs">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-base text-zinc-900">
-                      Pustaka Galeri Media
-                    </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#ffdbcf] text-[#9f3c16]">
-                      {mediaPickerTarget === "cover" ? "Target: Foto Sampul" : "Target: Galeri Tambahan"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Klik pada salah satu foto untuk langsung menerapkannya ke formulir penginapan.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMediaPickerOpen(false)}
-                className="w-9 h-9 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Filter & Search Bar */}
-            <div className="p-4 border-b border-zinc-100 bg-white flex flex-col sm:flex-row gap-3 items-center justify-between">
-              <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  placeholder="Cari foto berdasarkan nama..."
-                  value={mediaPickerSearch}
-                  onChange={(e) => setMediaPickerSearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 font-medium"
-                />
-              </div>
-
-              {/* Direct upload inside picker */}
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const pickerInput = document.getElementById("picker-direct-upload-tambah") as HTMLInputElement;
-                    pickerInput?.click();
-                  }}
-                  disabled={directUploading}
-                  className="px-4 py-2 rounded-xl bg-[#9f3c16] hover:bg-[#853010] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {directUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-                  <span>Upload Foto Baru</span>
-                </button>
-                <input
-                  id="picker-direct-upload-tambah"
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      await handleDirectUpload(file, mediaPickerTarget);
-                      setMediaPickerOpen(false);
-                    }
-                  }}
-                  className="hidden"
-                />
-              </div>
-            </div>
-
-            {/* Grid of Images */}
-            <div className="flex-1 overflow-y-auto p-6 max-h-[60vh] bg-zinc-50/30">
-              {loadingMediaGallery ? (
-                <div className="py-20 text-center flex flex-col items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#9f3c16] mb-3" />
-                  <p className="text-xs font-medium text-zinc-500">Memuat pustaka galeri media...</p>
-                </div>
-              ) : (
-                (() => {
-                  const filtered = mediaGalleryList.filter((m) => {
-                    const matchQ =
-                      m.name.toLowerCase().includes(mediaPickerSearch.toLowerCase()) ||
-                      m.category.toLowerCase().includes(mediaPickerSearch.toLowerCase());
-                    return matchQ;
-                  });
-
-                  if (filtered.length === 0) {
-                    return (
-                      <div className="py-16 text-center">
-                        <ImageIcon className="w-12 h-12 text-zinc-300 mx-auto mb-3" />
-                        <h4 className="text-sm font-bold text-zinc-700">Tidak ada foto ditemukan</h4>
-                        <p className="text-xs text-zinc-400 mt-1">Coba kata kunci lain atau upload foto baru dari komputer.</p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {filtered.map((item) => {
-                        const isSelectedCover = mediaPickerTarget === "cover" && coverPhoto === item.url;
-                        const isSelectedGallery = mediaPickerTarget === "gallery" && additionalImages.includes(item.url);
-                        const isSelected = isSelectedCover || isSelectedGallery;
-
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => handleSelectMediaPhoto(item.url)}
-                            className={`group relative rounded-2xl overflow-hidden border-2 bg-white transition-all cursor-pointer hover:shadow-md ${
-                              isSelected
-                                ? "border-[#9f3c16] ring-2 ring-[#9f3c16]/30 shadow-xs"
-                                : "border-zinc-200/80 hover:border-zinc-400"
-                            }`}
-                          >
-                            <div className="aspect-video relative overflow-hidden bg-zinc-100">
-                              <img
-                                src={item.url}
-                                alt={item.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={(e: any) => {
-                                  e.currentTarget.src = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400";
-                                }}
-                              />
-                              {isSelected && (
-                                <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#9f3c16] text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                                  ✓
-                                </div>
-                              )}
-                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-medium text-white truncate max-w-[85%]">
-                                {item.category}
-                              </span>
-                            </div>
-
-                            <div className="p-3">
-                              <p className="text-xs font-bold text-zinc-900 truncate" title={item.name}>
-                                {item.name}
-                              </p>
-                              <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between">
-                                <span className="text-[10px] text-zinc-400 truncate max-w-[100px]">
-                                  {item.url.startsWith("/") ? "Upload Lokal" : "Web URL"}
-                                </span>
-                                <span className="text-[11px] font-bold text-[#9f3c16] group-hover:underline">
-                                  {isSelected ? "Terpilih ✓" : "Pilih Foto"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-zinc-100 bg-white flex items-center justify-between">
-              <span className="text-xs text-zinc-400">
-                Total {mediaGalleryList.length} foto tersedia dalam galeri pustaka.
-              </span>
-              <button
-                type="button"
-                onClick={() => setMediaPickerOpen(false)}
-                className="px-5 py-2 rounded-xl border border-zinc-300 text-zinc-700 hover:bg-zinc-100 font-semibold text-xs transition-colors cursor-pointer"
-              >
-                Tutup Galeri
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
