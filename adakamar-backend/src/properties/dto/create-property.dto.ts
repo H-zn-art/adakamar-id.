@@ -55,6 +55,18 @@ export class CreatePropertyDto {
   whatsappNumber: string;
 
   @IsOptional()
+  @IsString()
+  hostName?: string;
+
+  @IsOptional()
+  @IsString()
+  hostTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  responseTime?: string;
+
+  @IsOptional()
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
 

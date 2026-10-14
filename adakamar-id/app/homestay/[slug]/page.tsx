@@ -68,6 +68,9 @@ export default async function DetailPage({
   let propertyRules = "";
   let propertyReviews: any[] = [];
   let propertyRoomTypes: { id: string; name: string; capacity: number; totalUnits?: number; pricePerNight: number; facilities?: string; isAvailable: boolean; images: string[] }[] = [];
+  let propertyHostName = "";
+  let propertyHostTitle = "";
+  let propertyResponseTime = "";
   let similarProps: any[] = [];
 
   try {
@@ -95,6 +98,9 @@ export default async function DetailPage({
         propertyArea = p.locationArea?.name || "";
         propertyWhatsapp = p.whatsappNumber || "";
         propertyRules = p.rules || "";
+        propertyHostName = p.hostName || "";
+        propertyHostTitle = p.hostTitle || "";
+        propertyResponseTime = p.responseTime || "";
         propertyImages = (p.images || [])
           .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
           .map((img: any) => img.imageUrl)
@@ -410,10 +416,10 @@ export default async function DetailPage({
                 </div>
                 <div>
                   <div style={{ fontSize: "15px", fontWeight: 700, color: "#1a1b22" }}>
-                    Dikelola oleh Mas Danang & Mbak Ratna
+                    {propertyHostName ? `Dikelola oleh ${propertyHostName}` : `Dikelola oleh Pengelola ${propertyName}`}
                   </div>
                   <div style={{ fontSize: "13px", color: "#57423b" }}>
-                    Host Lokal Bestari · Host sejak 2019 · Prawirotaman, Jogja
+                    {propertyHostTitle || "Host Terverifikasi adakamar"} · {propertyArea ? `${propertyArea}, DI Yogyakarta` : propertyAddress || "DI Yogyakarta"}
                   </div>
                 </div>
               </div>
@@ -434,7 +440,7 @@ export default async function DetailPage({
                 <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
                   timer
                 </span>
-                RESPON CEPAT ≥ 3 Menit
+                {propertyResponseTime || "RESPON CEPAT VIA WHATSAPP"}
               </div>
             </div>
 
@@ -449,10 +455,26 @@ export default async function DetailPage({
               className="capacity-grid"
             >
               {[
-                { icon: "group", label: `${propertyCapacity} Tamu`, sub: "Kapasitas Maksimal" },
-                { icon: "bed", label: `${propertyBedrooms} Kamar Tidur`, sub: "Termasuk kamar utama" },
-                { icon: "bathroom", label: `${propertyBathrooms} Kamar Mandi`, sub: "Kamar mandi dalam" },
-                { icon: "location_on", label: propertyArea || "Yogyakarta", sub: "Lokasi properti" },
+                { 
+                  icon: "group", 
+                  label: `${propertyCapacity} Tamu`, 
+                  sub: "Kapasitas Maksimal Hunian" 
+                },
+                { 
+                  icon: "bed", 
+                  label: `${propertyBedrooms} Kamar Tidur`, 
+                  sub: propertyRoomTypes.length > 0 ? `${propertyRoomTypes.length} Tipe Kamar Pilihan` : "Unit kamar tidur nyaman" 
+                },
+                { 
+                  icon: "bathroom", 
+                  label: `${propertyBathrooms} Kamar Mandi`, 
+                  sub: "Fasilitas mandi lengkap" 
+                },
+                { 
+                  icon: "location_on", 
+                  label: propertyArea || "DI Yogyakarta", 
+                  sub: propertyAddress || "Lokasi properti" 
+                },
               ].map((c) => (
                 <div
                   key={c.label}

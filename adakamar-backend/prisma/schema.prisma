@@ -68,6 +68,9 @@ model Property {
   latitude       Float?
   longitude      Float?
   whatsappNumber String
+  hostName       String?
+  hostTitle      String?
+  responseTime   String?
   rules          String?         @db.Text
   status         PropertyStatus  @default(ACTIVE)
   isFeatured     Boolean         @default(false)

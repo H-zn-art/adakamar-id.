@@ -120,6 +120,9 @@ function AddEditPenginapanContent() {
     amenities: [] as string[],
     whatsapp: "6285795445463",
     categoryId: "",
+    hostName: "",
+    hostTitle: "",
+    responseTime: "",
   });
 
   useEffect(() => {
@@ -174,6 +177,9 @@ function AddEditPenginapanContent() {
               : [],
             whatsapp: data.whatsappNumber || "6285795445463",
             categoryId: data.categoryId || "",
+            hostName: data.hostName || "",
+            hostTitle: data.hostTitle || "",
+            responseTime: data.responseTime || "",
           });
 
           if (data.images && Array.isArray(data.images) && data.images.length > 0) {
@@ -275,6 +281,9 @@ function AddEditPenginapanContent() {
         bedroomCount: Number(formData.bedrooms) || 1,
         bathroomCount: Number(formData.bathrooms) || 1,
         whatsappNumber: formData.whatsapp || "6285795445463",
+        hostName: formData.hostName ? formData.hostName.trim() : undefined,
+        hostTitle: formData.hostTitle ? formData.hostTitle.trim() : undefined,
+        responseTime: formData.responseTime ? formData.responseTime.trim() : undefined,
         status: formData.status === "active" ? ("ACTIVE" as const) : ("INACTIVE" as const),
         isFeatured: formData.featured,
         facilityIds: facilityIds.length > 0 ? facilityIds : undefined,
@@ -849,6 +858,55 @@ function AddEditPenginapanContent() {
                         onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                         className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none font-semibold"
                       />
+                    </div>
+                  </div>
+
+                  {/* Profil Tuan Rumah / Host Pengelola */}
+                  <div className="pt-4 border-t border-zinc-100">
+                    <h3 className="text-xs font-bold text-zinc-900 mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#9f3c16]" />
+                      Profil Tuan Rumah / Host Pengelola (Tampil di Detail Homestay)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-zinc-800 block mb-1.5">
+                          Nama Tuan Rumah / Host
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: Mas Danang & Mbak Ratna"
+                          value={formData.hostName}
+                          onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
+                          className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-zinc-400 mt-1">Default: Tuan Rumah nama homestay</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-zinc-800 block mb-1.5">
+                          Gelar / Status Host
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: Host Lokal Bestari · Host sejak 2021"
+                          value={formData.hostTitle}
+                          onChange={(e) => setFormData({ ...formData, hostTitle: e.target.value })}
+                          className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-zinc-400 mt-1">Default: Host Terverifikasi adakamar</p>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-zinc-800 block mb-1.5">
+                          Kecepatan Respon
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: RESPON CEPAT ≤ 3 Menit"
+                          value={formData.responseTime}
+                          onChange={(e) => setFormData({ ...formData, responseTime: e.target.value })}
+                          className="w-full h-11 px-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-zinc-400 mt-1">Default: Respon Cepat via WhatsApp</p>
+                      </div>
                     </div>
                   </div>
 
