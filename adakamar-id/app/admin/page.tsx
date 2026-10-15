@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AdminSidebar from "@/components/layout/AdminSidebar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { propertiesApi, inquiriesApi, articlesApi, promosApi, usersApi } from "@/lib/api";
 import {
   Home,
@@ -21,6 +21,18 @@ import {
   Sparkles,
   Ticket,
   MapPin,
+  Bell,
+  BellRing,
+  Receipt,
+  AlertTriangle,
+  RefreshCw,
+  MessageCircle,
+  ExternalLink,
+  Check,
+  X,
+  CalendarCheck,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; dot: string; text: string; bg: string }> = {
@@ -29,6 +41,39 @@ const statusConfig: Record<string, { label: string; dot: string; text: string; b
   completed: { label: "Selesai", dot: "bg-zinc-400", text: "text-zinc-700", bg: "bg-zinc-100 border-zinc-200/60" },
   cancelled: { label: "Dibatalkan", dot: "bg-rose-500", text: "text-rose-700", bg: "bg-rose-50 border-rose-200/60" },
 };
+
+export interface ReservationNotification {
+  id: string;
+  rawId: string;
+  code: string;
+  type: "checkout_due" | "new_booking";
+  guest: string;
+  guestPhone: string;
+  guestEmail?: string;
+  property: string;
+  propertySlug?: string;
+  roomTypeName?: string;
+  checkInDate: string | null;
+  checkOutDate: string | null;
+  checkInFormatted: string;
+  checkOutFormatted: string;
+  nights: number;
+  amount: string;
+  amountNumber: number;
+  status: string;
+  statusLabel: string;
+  createdAt: string;
+  urgency: "high" | "normal";
+  reasonText: string;
+  daysOverdue?: number;
+}
+
+function toWaNumber(phone: string): string {
+  const digits = (phone || "").replace(/[^0-9]/g, "");
+  if (digits.startsWith("62")) return digits;
+  if (digits.startsWith("0")) return "62" + digits.substring(1);
+  return digits;
+}
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<{
@@ -50,157 +95,362 @@ export default function AdminDashboard() {
   });
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [pendingArticles, setPendingArticles] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<ReservationNotification[]>([]);
+  const [activeNotifTab, setActiveNotifTab] = useState<"checkout_due" | "new_booking" | "all">("checkout_due");
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [dropdownFilter, setDropdownFilter] = useState<"all" | "checkout_due" | "new_booking">("all");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close notification dropdown when clicking outside
   useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        const [propsRes, inqRes, artRes, promoRes, usersRes] = await Promise.allSettled([
-          propertiesApi.list({ limit: 50 }),
-          inquiriesApi.list({ limit: 10 }),
-          articlesApi.list({ limit: 10 }),
-          promosApi.listActive(),
-          usersApi.findAll('PENULIS'),
-        ]);
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        notifDropdownRef.current &&
+        !notifDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowNotificationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-        let propCount = 0;
-        let avgR: number | null = null;
-        let totalRev = 0;
-        if (propsRes.status === "fulfilled" && propsRes.value) {
-          propCount = propsRes.value.meta?.total ?? propsRes.value.data?.length ?? 0;
-          if (Array.isArray(propsRes.value.data) && propsRes.value.data.length > 0) {
-            const reviewed = propsRes.value.data.filter(
-              (p: any) => (p.reviewCount ?? 0) > 0 && typeof p.rating === "number"
+  const loadDashboardData = useCallback(async (silent = false) => {
+    if (!silent) setIsRefreshing(true);
+    try {
+      const [propsRes, inqRes, artRes, promoRes, usersRes] = await Promise.allSettled([
+        propertiesApi.list({ limit: 50 }),
+        inquiriesApi.list({ limit: 60 }),
+        articlesApi.list({ limit: 10 }),
+        promosApi.listActive(),
+        usersApi.findAll("PENULIS"),
+      ]);
+
+      let propCount = 0;
+      let avgR: number | null = null;
+      let totalRev = 0;
+      if (propsRes.status === "fulfilled" && propsRes.value) {
+        propCount = propsRes.value.meta?.total ?? propsRes.value.data?.length ?? 0;
+        if (Array.isArray(propsRes.value.data) && propsRes.value.data.length > 0) {
+          const reviewed = propsRes.value.data.filter(
+            (p: any) => (p.reviewCount ?? 0) > 0 && typeof p.rating === "number"
+          );
+          totalRev = reviewed.reduce((acc: number, p: any) => acc + (p.reviewCount || 0), 0);
+          if (totalRev > 0) {
+            avgR = Number(
+              (
+                reviewed.reduce(
+                  (acc: number, p: any) => acc + p.rating * (p.reviewCount || 0),
+                  0
+                ) / totalRev
+              ).toFixed(1)
             );
-            totalRev = reviewed.reduce((acc: number, p: any) => acc + (p.reviewCount || 0), 0);
-            if (totalRev > 0) {
-              avgR = Number(
-                (
-                  reviewed.reduce(
-                    (acc: number, p: any) => acc + p.rating * (p.reviewCount || 0),
-                    0
-                  ) / totalRev
-                ).toFixed(1)
-              );
-            }
           }
         }
+      }
 
-        let inqCount = 0;
-        let bookings: any[] = [];
-        if (inqRes.status === "fulfilled" && inqRes.value) {
-          inqCount = inqRes.value.meta?.total ?? inqRes.value.data?.length ?? 0;
-          if (Array.isArray(inqRes.value.data)) {
-            bookings = inqRes.value.data.map((i: any) => {
-              const nights =
-                i.checkInDate && i.checkOutDate
-                  ? Math.max(
-                      1,
-                      Math.round(
-                        (new Date(i.checkOutDate).getTime() -
-                          new Date(i.checkInDate).getTime()) /
-                          (1000 * 3600 * 24)
-                      )
+      let inqCount = 0;
+      const bookings: any[] = [];
+      const notifs: ReservationNotification[] = [];
+
+      if (inqRes.status === "fulfilled" && inqRes.value) {
+        inqCount = inqRes.value.meta?.total ?? inqRes.value.data?.length ?? 0;
+        if (Array.isArray(inqRes.value.data)) {
+          const now = new Date();
+          const nowTime = now.getTime();
+
+          inqRes.value.data.forEach((i: any) => {
+            const nights =
+              i.checkInDate && i.checkOutDate
+                ? Math.max(
+                    1,
+                    Math.round(
+                      (new Date(i.checkOutDate).getTime() -
+                        new Date(i.checkInDate).getTime()) /
+                        (1000 * 3600 * 24)
                     )
-                  : 1;
-              // Ekstraksi total dari catatan pemesanan (termasuk promo yang diaplikasikan)
-              let totalAmount = 0;
-              if (i.notes) {
-                const match = i.notes.match(/Total(?: Estimasi)?:\s*Rp\s*([\d\.,]+)/i);
-                if (match && match[1]) {
-                  const parsed = parseInt(match[1].replace(/[.,]/g, ""), 10);
-                  if (!isNaN(parsed) && parsed > 0) totalAmount = parsed;
-                }
-              }
-              if (!totalAmount) {
-                const unitPrice = i.property?.price || 500000;
-                totalAmount = unitPrice * nights;
-              }
+                  )
+                : 1;
 
-              // Ekstraksi tipe kamar
-              let roomTypeName = i.roomTypeName || "";
-              if (!roomTypeName && i.notes) {
-                const match = i.notes.match(/\[Kamar:\s*([^\]\-]+)/);
-                if (match) roomTypeName = match[1].trim();
+            let totalAmount = 0;
+            if (i.notes) {
+              const match = i.notes.match(/Total(?: Estimasi)?:\s*Rp\s*([\d\.,]+)/i);
+              if (match && match[1]) {
+                const parsed = parseInt(match[1].replace(/[.,]/g, ""), 10);
+                if (!isNaN(parsed) && parsed > 0) totalAmount = parsed;
               }
+            }
+            if (!totalAmount) {
+              const unitPrice = i.property?.price || 500000;
+              totalAmount = unitPrice * nights;
+            }
 
-              return {
-                id: `INQ-${i.id.slice(-6).toUpperCase()}`,
+            let roomTypeName = i.roomTypeName || "";
+            if (!roomTypeName && i.notes) {
+              const match = i.notes.match(/\[Kamar:\s*([^\]\-]+)/);
+              if (match) roomTypeName = match[1].trim();
+            }
+
+            const code = `INQ-${i.id.slice(-6).toUpperCase()}`;
+            const checkInFormatted = i.checkInDate
+              ? new Date(i.checkInDate).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "Fleksibel";
+            const checkOutFormatted = i.checkOutDate
+              ? new Date(i.checkOutDate).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "Fleksibel";
+
+            // 1. Kondisi Selesai Reservasi / Checkout Due (Perlu Proses Nota)
+            const checkOutTime = i.checkOutDate ? new Date(i.checkOutDate).getTime() : null;
+            const isCheckoutDue =
+              checkOutTime !== null &&
+              checkOutTime <= nowTime &&
+              i.status !== "COMPLETED" &&
+              i.status !== "CANCELLED";
+
+            // 2. Kondisi Reservasi Baru Masuk (NEW)
+            const isNewBooking = i.status === "NEW";
+
+            if (isCheckoutDue) {
+              const diffMs = nowTime - checkOutTime!;
+              const daysOver = Math.floor(diffMs / (1000 * 3600 * 24));
+              const overdueText =
+                daysOver === 0
+                  ? "Selesai menginap hari ini"
+                  : `Selesai ${daysOver} hari lalu (${checkOutFormatted})`;
+
+              notifs.push({
+                id: `notif-due-${i.id}`,
+                rawId: i.id,
+                code,
+                type: "checkout_due",
+                guest: i.guestName,
+                guestPhone: i.guestPhone,
+                guestEmail: i.guestEmail,
+                property: i.property?.name || "Homestay Jogja",
+                propertySlug: i.property?.slug,
+                roomTypeName,
+                checkInDate: i.checkInDate,
+                checkOutDate: i.checkOutDate,
+                checkInFormatted,
+                checkOutFormatted,
+                nights,
+                amount: `Rp ${totalAmount.toLocaleString("id-ID")}`,
+                amountNumber: totalAmount,
+                status: i.status,
+                statusLabel:
+                  i.status === "CONTACTED"
+                    ? "Dikonfirmasi"
+                    : i.status === "IN_PROGRESS"
+                    ? "Berlangsung"
+                    : "Menunggu",
+                createdAt: new Date(i.createdAt).toLocaleDateString("id-ID"),
+                urgency: "high",
+                reasonText: `${overdueText} — Waktu menginap telah berakhir. Segera proses nota pelunasan untuk tamu.`,
+                daysOverdue: daysOver,
+              });
+            } else if (isNewBooking) {
+              notifs.push({
+                id: `notif-new-${i.id}`,
+                rawId: i.id,
+                code,
+                type: "new_booking",
+                guest: i.guestName,
+                guestPhone: i.guestPhone,
+                guestEmail: i.guestEmail,
+                property: i.property?.name || "Homestay Jogja",
+                propertySlug: i.property?.slug,
+                roomTypeName,
+                checkInDate: i.checkInDate,
+                checkOutDate: i.checkOutDate,
+                checkInFormatted,
+                checkOutFormatted,
+                nights,
+                amount: `Rp ${totalAmount.toLocaleString("id-ID")}`,
+                amountNumber: totalAmount,
+                status: i.status,
+                statusLabel: "Menunggu Respon",
+                createdAt: new Date(i.createdAt).toLocaleDateString("id-ID"),
+                urgency: "normal",
+                reasonText: `Pesanan reservasi baru masuk via web/WhatsApp. Harap konfirmasi ketersediaan unit.`,
+              });
+            }
+
+            // Recent Bookings list
+            if (bookings.length < 8) {
+              bookings.push({
+                id: code,
+                rawId: i.id,
                 guest: i.guestName,
                 property: i.property?.name || "Homestay Jogja",
                 roomTypeName,
-                checkin: i.checkInDate
-                  ? new Date(i.checkInDate).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                    })
-                  : "Fleksibel",
+                checkin: checkInFormatted,
                 nights,
                 amount: `Rp ${totalAmount.toLocaleString("id-ID")}`,
                 status:
                   i.status === "NEW"
                     ? "pending"
-                    : i.status === "CONTACTED"
+                    : i.status === "CONTACTED" || i.status === "IN_PROGRESS"
                     ? "confirmed"
                     : i.status === "COMPLETED"
                     ? "completed"
                     : "cancelled",
-              };
-            });
-          }
-        }
+              });
+            }
+          });
 
-        let artCount = 0;
-        let pendings: any[] = [];
-        if (artRes.status === "fulfilled" && artRes.value) {
-          artCount = artRes.value.meta?.total ?? artRes.value.data?.length ?? 0;
-          if (Array.isArray(artRes.value.data)) {
-            pendings = artRes.value.data
-              .filter(
-                (a: any) =>
-                  a.status === "PENDING_REVIEW" || a.status === "DRAFT"
-              )
-              .slice(0, 3)
-              .map((a: any) => ({
-                title: a.title,
-                author: a.author?.name || "Penulis",
-                category: a.category?.name || "Umum",
-                submitted: new Date(a.createdAt).toLocaleDateString("id-ID"),
-              }));
-          }
+          // Urutkan notifikasi: prioritas checkout_due di paling atas agar admin segera memproses nota
+          notifs.sort((a, b) => {
+            if (a.urgency === "high" && b.urgency !== "high") return -1;
+            if (b.urgency === "high" && a.urgency !== "high") return 1;
+            return 0;
+          });
         }
-
-        // Hitung promo aktif (PRD Seksi 6)
-        let activePromoCount = 0;
-        if (promoRes.status === "fulfilled" && Array.isArray(promoRes.value)) {
-          activePromoCount = promoRes.value.filter(
-            (p: any) => p.isActive && new Date(p.endDate) > new Date()
-          ).length;
-        }
-
-        // Hitung total penulis (PRD Seksi 14)
-        let penulisCount = 0;
-        if (usersRes.status === "fulfilled" && Array.isArray(usersRes.value)) {
-          penulisCount = usersRes.value.length;
-        }
-
-        setStats({
-          propertyCount: propCount,
-          inquiryCount: inqCount,
-          articleCount: artCount,
-          avgRating: avgR,
-          totalReviews: totalRev,
-          activePromoCount,
-          penulisCount,
-        });
-        setRecentBookings(bookings);
-        setPendingArticles(pendings);
-      } catch (err) {
-        console.warn("Dashboard sync warning:", err);
       }
-    }
 
-    loadDashboardData();
+      let artCount = 0;
+      let pendings: any[] = [];
+      if (artRes.status === "fulfilled" && artRes.value) {
+        artCount = artRes.value.meta?.total ?? artRes.value.data?.length ?? 0;
+        if (Array.isArray(artRes.value.data)) {
+          pendings = artRes.value.data
+            .filter((a: any) => a.status === "PENDING_REVIEW" || a.status === "DRAFT")
+            .slice(0, 3)
+            .map((a: any) => ({
+              title: a.title,
+              author: a.author?.name || "Penulis",
+              category: a.category?.name || "Umum",
+              submitted: new Date(a.createdAt).toLocaleDateString("id-ID"),
+            }));
+        }
+      }
+
+      let activePromoCount = 0;
+      if (promoRes.status === "fulfilled" && Array.isArray(promoRes.value)) {
+        activePromoCount = promoRes.value.filter(
+          (p: any) => p.isActive && new Date(p.endDate) > new Date()
+        ).length;
+      }
+
+      let penulisCount = 0;
+      if (usersRes.status === "fulfilled" && Array.isArray(usersRes.value)) {
+        penulisCount = usersRes.value.length;
+      }
+
+      setStats({
+        propertyCount: propCount,
+        inquiryCount: inqCount,
+        articleCount: artCount,
+        avgRating: avgR,
+        totalReviews: totalRev,
+        activePromoCount,
+        penulisCount,
+      });
+      setRecentBookings(bookings);
+      setPendingArticles(pendings);
+      setNotifications(notifs);
+
+      // Default tab selection
+      const hasDue = notifs.some((n) => n.type === "checkout_due");
+      const hasNew = notifs.some((n) => n.type === "new_booking");
+      if (hasDue) {
+        setActiveNotifTab("checkout_due");
+      } else if (hasNew) {
+        setActiveNotifTab("new_booking");
+      }
+    } catch (err) {
+      console.warn("Dashboard sync warning:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+    // Auto-refresh periodically every 45s
+    const timer = setInterval(() => {
+      loadDashboardData(true);
+    }, 45000);
+    return () => clearInterval(timer);
+  }, [loadDashboardData]);
+
+  // Aksi Tandai Selesai Langsung dari Dashboard
+  const handleMarkCompleted = async (rawId: string) => {
+    try {
+      setUpdatingId(rawId);
+      await inquiriesApi.updateStatus(rawId, "COMPLETED");
+      setToastMessage("✓ Reservasi berhasil diselesaikan dan status nota diperbarui!");
+      await loadDashboardData(true);
+    } catch (err: any) {
+      setToastMessage(`✕ Gagal update: ${err?.message || "Cek koneksi backend"}`);
+    } finally {
+      setUpdatingId(null);
+      setTimeout(() => setToastMessage(null), 3500);
+    }
+  };
+
+  // Aksi Kirim Nota ke WhatsApp Tamu
+  const handleSendNotaWa = (n: ReservationNotification) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://adakamar.id";
+    const notaUrl = `${origin}/nota/${n.rawId}`;
+    const phone = toWaNumber(n.guestPhone);
+    const roomInfo = n.roomTypeName ? `\n🛏️ Tipe Kamar: ${n.roomTypeName}` : "";
+    const text = encodeURIComponent(
+      `Halo Kak ${n.guest}, terima kasih telah menginap di ${n.property} melalui adakamar.id.\n\n` +
+      `Masa menginap Anda telah selesai. Berikut tautan nota resmi reservasi Anda:\n` +
+      `${notaUrl}${roomInfo}\n` +
+      `💰 Total: ${n.amount}\n` +
+      `📋 Kode Reservasi: ${n.code}\n\n` +
+      `Silakan buka link di atas untuk menyimpan atau mencetak nota. Terima kasih dan semoga berkunjung kembali ke Jogja! 🙏`
+    );
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+  };
+
+  // Aksi Hubungi Tamu WhatsApp (Inquiry Baru)
+  const handleContactGuestWa = (n: ReservationNotification) => {
+    const phone = toWaNumber(n.guestPhone);
+    const roomInfo = n.roomTypeName ? ` (Tipe Kamar: ${n.roomTypeName})` : "";
+    const text = encodeURIComponent(
+      `Halo Kak ${n.guest}, kami dari tim adakamar.id / Pengelola ${n.property}.\n\n` +
+      `Permintaan reservasi Anda telah kami terima:${roomInfo}\n` +
+      `- Check-in: ${n.checkInFormatted}\n` +
+      `- Check-out: ${n.checkOutFormatted}\n` +
+      `- Total Estimasi: ${n.amount}\n` +
+      `- Kode: ${n.code}\n\n` +
+      `Apakah jadwal menginap sudah sesuai? Kami siap membantu proses konfirmasi reservasi Anda. Terima kasih!`
+    );
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+  };
+
+  // Filtered notifications
+  const checkoutDueNotifs = notifications.filter((n) => n.type === "checkout_due");
+  const newBookingNotifs = notifications.filter((n) => n.type === "new_booking");
+  const totalAlertCount = notifications.length;
+
+  const currentDisplayNotifs =
+    activeNotifTab === "checkout_due"
+      ? checkoutDueNotifs
+      : activeNotifTab === "new_booking"
+      ? newBookingNotifs
+      : notifications;
+
+  const dropdownDisplayNotifs =
+    dropdownFilter === "checkout_due"
+      ? checkoutDueNotifs
+      : dropdownFilter === "new_booking"
+      ? newBookingNotifs
+      : notifications;
 
   const statCards = [
     {
@@ -285,6 +535,238 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* ── NOTIFICATION BELL & DROPDOWN ── */}
+            <div className="relative" ref={notifDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                className={`relative p-2.5 rounded-2xl bg-white hover:bg-zinc-50 border border-zinc-200/80 transition-all shadow-2xs cursor-pointer flex items-center justify-center ${
+                  showNotificationDropdown ? "ring-2 ring-[#9f3c16]/20 border-[#9f3c16]" : ""
+                }`}
+                title="Notifikasi Inquiry & Reservasi Tamu"
+              >
+                <Bell
+                  className={`w-5 h-5 transition-transform ${
+                    totalAlertCount > 0 ? "text-[#9f3c16]" : "text-zinc-500"
+                  }`}
+                />
+                {totalAlertCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#9f3c16] px-1 text-[10px] font-black text-white shadow-md ring-2 ring-white animate-pulse">
+                    {totalAlertCount > 99 ? "99+" : totalAlertCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Popover */}
+              {showNotificationDropdown && (
+                <div className="absolute right-0 mt-2.5 w-96 sm:w-[420px] rounded-3xl bg-white border border-zinc-200 shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Header Dropdown */}
+                  <div className="p-4 bg-gradient-to-r from-zinc-900 to-zinc-800 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                        <BellRing className="w-4 h-4 text-amber-300" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-extrabold">Notifikasi Reservasi Tamu</h4>
+                        <p className="text-[10px] text-zinc-300">
+                          {checkoutDueNotifs.length} perlu proses nota · {newBookingNotifs.length} booking baru
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => loadDashboardData()}
+                      className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors cursor-pointer text-zinc-300 hover:text-white"
+                      title="Segarkan notifikasi"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+
+                  {/* Filter Tabs in Dropdown */}
+                  <div className="flex items-center gap-1 p-2 bg-zinc-50 border-b border-zinc-100 text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setDropdownFilter("all")}
+                      className={`flex-1 py-1.5 rounded-xl transition-all cursor-pointer ${
+                        dropdownFilter === "all"
+                          ? "bg-white text-zinc-900 shadow-2xs border border-zinc-200/60"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                    >
+                      Semua ({notifications.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDropdownFilter("checkout_due")}
+                      className={`flex-1 py-1.5 rounded-xl transition-all cursor-pointer ${
+                        dropdownFilter === "checkout_due"
+                          ? "bg-white text-[#9f3c16] shadow-2xs border border-zinc-200/60 font-black"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                    >
+                      Perlu Nota ({checkoutDueNotifs.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDropdownFilter("new_booking")}
+                      className={`flex-1 py-1.5 rounded-xl transition-all cursor-pointer ${
+                        dropdownFilter === "new_booking"
+                          ? "bg-white text-emerald-700 shadow-2xs border border-zinc-200/60"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                    >
+                      Baru ({newBookingNotifs.length})
+                    </button>
+                  </div>
+
+                  {/* List Notifikasi */}
+                  <div className="max-h-96 overflow-y-auto divide-y divide-zinc-100 p-1">
+                    {dropdownDisplayNotifs.length > 0 ? (
+                      dropdownDisplayNotifs.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`p-3.5 rounded-2xl transition-all hover:bg-zinc-50 flex flex-col gap-2 ${
+                            n.type === "checkout_due" ? "bg-amber-50/40" : ""
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  n.type === "checkout_due"
+                                    ? "bg-[#9f3c16] animate-pulse"
+                                    : "bg-emerald-500"
+                                }`}
+                              />
+                              <span className="text-[11px] font-black text-zinc-900">
+                                {n.guest}
+                              </span>
+                              <span className="text-[10px] font-mono text-zinc-400">
+                                {n.code}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                n.type === "checkout_due"
+                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              }`}
+                            >
+                              {n.type === "checkout_due" ? "Perlu Proses Nota" : "Booking Baru"}
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-zinc-600">
+                            <span className="font-semibold text-zinc-900">{n.property}</span>
+                            {n.roomTypeName && (
+                              <span className="text-[#9f3c16] font-bold"> · {n.roomTypeName}</span>
+                            )}
+                            <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center justify-between">
+                              <span>
+                                {n.checkInFormatted} → {n.checkOutFormatted} ({n.nights} mlm)
+                              </span>
+                              <span className="font-extrabold text-zinc-900">{n.amount}</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-zinc-500 italic bg-white/80 p-1.5 rounded-lg border border-zinc-200/50">
+                            {n.reasonText}
+                          </p>
+
+                          {/* Quick Action Buttons */}
+                          <div className="flex items-center gap-1.5 pt-1">
+                            {n.type === "checkout_due" ? (
+                              <>
+                                <Link
+                                  href={`/nota/${n.rawId}`}
+                                  target="_blank"
+                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:opacity-95 shadow-xs"
+                                >
+                                  <Receipt className="w-3 h-3" />
+                                  <span>Proses Nota</span>
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkCompleted(n.rawId)}
+                                  disabled={updatingId === n.rawId}
+                                  className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  title="Tandai Selesai"
+                                >
+                                  {updatingId === n.rawId ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Check className="w-3 h-3" />
+                                  )}
+                                  <span>Selesai</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendNotaWa(n)}
+                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  title="Kirim Nota via WA"
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-600" />
+                                  <span>WA</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <Link
+                                  href="/admin/inquiry"
+                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-zinc-900 text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:bg-zinc-800 shadow-xs"
+                                >
+                                  <ArrowUpRight className="w-3 h-3" />
+                                  <span>Buka Inquiry</span>
+                                </Link>
+                                <Link
+                                  href={`/nota/${n.rawId}`}
+                                  target="_blank"
+                                  className="py-1.5 px-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1"
+                                >
+                                  <Receipt className="w-3 h-3" />
+                                  <span>Nota</span>
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={() => handleContactGuestWa(n)}
+                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  title="Chat Tamu WhatsApp"
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-600" />
+                                  <span>Chat</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-8 text-center text-zinc-400 text-xs">
+                        <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-80" />
+                        <p className="font-bold text-zinc-700">Semua reservasi terkendali</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Tidak ada nota tertunda yang perlu diproses.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Dropdown */}
+                  <div className="p-3 bg-zinc-50 border-t border-zinc-100 text-center">
+                    <Link
+                      href="/admin/inquiry"
+                      onClick={() => setShowNotificationDropdown(false)}
+                      className="text-xs font-bold text-[#9f3c16] hover:underline inline-flex items-center gap-1"
+                    >
+                      <span>Buka Manajemen Inquiry & Nota Lengkap</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Link
               href="/admin/penginapan"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white text-xs font-bold shadow-lg shadow-[#9f3c16]/20 hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
@@ -331,6 +813,288 @@ export default function AdminDashboard() {
               );
             })}
           </div>
+
+          {/* ══════════════════════════════════════════════════════════════════
+              PUSAT NOTIFIKASI & PENGINGAT OPERASIONAL RESERVASI TAMU
+          ══════════════════════════════════════════════════════════════════ */}
+          <section className="relative p-7 sm:p-8 rounded-3xl bg-white border border-zinc-200/80 shadow-xs overflow-hidden flex flex-col gap-6">
+            {/* Ambient Accent Glow */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-amber-500 via-[#9f3c16] to-[#bf542c]" />
+
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-zinc-100">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ffdbcf] to-amber-100 text-[#9f3c16] flex items-center justify-center shadow-xs shrink-0">
+                  <BellRing className="w-6 h-6 animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-extrabold text-zinc-950 tracking-tight">
+                      Notifikasi & Pengingat Reservasi Tamu
+                    </h2>
+                    {totalAlertCount > 0 && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-600 text-white shadow-xs">
+                        {totalAlertCount} Perlu Ditindaklanjuti
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Memantau tamu yang telah selesai menginap sesuai tanggal checkout agar admin langsung memproses nota pelunasan.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action & Refresher */}
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => loadDashboardData()}
+                  disabled={isRefreshing}
+                  className="px-4 py-2 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-bold text-zinc-700 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-60"
+                  title="Segarkan data notifikasi secara real-time"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <span>{isRefreshing ? "Menyegarkan..." : "Segarkan"}</span>
+                </button>
+                <Link
+                  href="/admin/inquiry"
+                  className="px-4 py-2 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
+                >
+                  <span>Kelola Semua Inquiry</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveNotifTab("checkout_due")}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  activeNotifTab === "checkout_due"
+                    ? "bg-[#ffdbcf] text-[#9f3c16] ring-1 ring-[#9f3c16]/30 shadow-xs"
+                    : "bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                <Receipt className="w-4 h-4" />
+                <span>Perlu Proses Nota (Selesai Menginap)</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                    activeNotifTab === "checkout_due"
+                      ? "bg-[#9f3c16] text-white"
+                      : "bg-zinc-200 text-zinc-700"
+                  }`}
+                >
+                  {checkoutDueNotifs.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveNotifTab("new_booking")}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  activeNotifTab === "new_booking"
+                    ? "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-600/30 shadow-xs"
+                    : "bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                <Mail className="w-4 h-4 text-emerald-700" />
+                <span>Inquiry & Booking Baru</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                    activeNotifTab === "new_booking"
+                      ? "bg-emerald-700 text-white"
+                      : "bg-zinc-200 text-zinc-700"
+                  }`}
+                >
+                  {newBookingNotifs.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveNotifTab("all")}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                  activeNotifTab === "all"
+                    ? "bg-zinc-900 text-white shadow-xs"
+                    : "bg-zinc-50 text-zinc-600 hover:bg-zinc-100"
+                }`}
+              >
+                <Bell className="w-4 h-4" />
+                <span>Semua Notifikasi ({notifications.length})</span>
+              </button>
+            </div>
+
+            {/* Notification Cards Grid */}
+            {currentDisplayNotifs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentDisplayNotifs.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-5 rounded-2xl border transition-all flex flex-col justify-between gap-4 ${
+                      item.type === "checkout_due"
+                        ? "bg-amber-50/40 border-amber-200 hover:border-[#9f3c16]/50 hover:shadow-md"
+                        : "bg-white border-zinc-200/80 hover:border-emerald-500/50 hover:shadow-md"
+                    }`}
+                  >
+                    <div>
+                      {/* Top Header of Card */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="font-mono text-xs font-extrabold text-zinc-700 bg-white px-2.5 py-1 rounded-lg border border-zinc-200/80 shadow-2xs">
+                          {item.code}
+                        </span>
+                        {item.type === "checkout_due" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#ffdbcf] text-[#9f3c16] border border-[#f3d5ca] animate-pulse">
+                            <Clock className="w-3 h-3" />
+                            SELESAI MENGINAP
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <Sparkles className="w-3 h-3" />
+                            BOOKING BARU
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Guest & Homestay Info */}
+                      <div className="space-y-1">
+                        <h3 className="text-base font-extrabold text-zinc-950 flex items-center justify-between">
+                          <span>{item.guest}</span>
+                          <span className="text-sm font-black text-[#9f3c16]">
+                            {item.amount}
+                          </span>
+                        </h3>
+                        <p className="text-xs font-semibold text-zinc-700 flex items-center gap-1.5">
+                          <Home className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <span className="truncate">{item.property}</span>
+                          {item.roomTypeName && (
+                            <span className="text-[10px] font-bold text-[#9f3c16] bg-[#ffdbcf]/70 px-1.5 py-0.5 rounded shrink-0">
+                              {item.roomTypeName}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Schedule info */}
+                      <div className="mt-3 p-3 rounded-xl bg-white/90 border border-zinc-200/70 text-xs space-y-1">
+                        <div className="flex items-center justify-between text-zinc-600">
+                          <span className="text-[11px] text-zinc-400">Jadwal Menginap:</span>
+                          <span className="font-bold text-zinc-800">
+                            {item.nights} Malam
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-semibold text-zinc-700 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#9f3c16]" />
+                          <span>{item.checkInFormatted}</span>
+                          <span>→</span>
+                          <span className={item.type === "checkout_due" ? "text-[#9f3c16] font-bold underline" : ""}>
+                            {item.checkOutFormatted}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Prompt / Reason */}
+                      <div
+                        className={`mt-2.5 p-2.5 rounded-xl text-[11px] font-medium leading-relaxed flex items-start gap-2 ${
+                          item.type === "checkout_due"
+                            ? "bg-amber-100/70 text-amber-950 border border-amber-200"
+                            : "bg-emerald-50 text-emerald-950 border border-emerald-200/80"
+                        }`}
+                      >
+                        <AlertCircle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${item.type === "checkout_due" ? "text-amber-700" : "text-emerald-700"}`} />
+                        <span>{item.reasonText}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="pt-3 border-t border-zinc-100 flex items-center gap-2">
+                      {item.type === "checkout_due" ? (
+                        <>
+                          <Link
+                            href={`/nota/${item.rawId}`}
+                            target="_blank"
+                            className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] hover:opacity-95 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                            title="Buka dan cetak nota resmi"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            <span>Proses Nota</span>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleMarkCompleted(item.rawId)}
+                            disabled={updatingId === item.rawId}
+                            className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Tandai Selesai & Lunas"
+                          >
+                            {updatingId === item.rawId ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            )}
+                            <span>Selesai</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSendNotaWa(item)}
+                            className="p-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
+                            title="Kirim tautan nota ke WhatsApp tamu"
+                          >
+                            <MessageCircle className="w-4 h-4 text-emerald-600" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href="/admin/inquiry"
+                            className="flex-1 py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                          >
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                            <span>Buka Inquiry</span>
+                          </Link>
+                          <Link
+                            href={`/nota/${item.rawId}`}
+                            target="_blank"
+                            className="py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold flex items-center gap-1 transition-colors"
+                            title="Lihat Nota Estimasi Awal"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            <span>Nota</span>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleContactGuestWa(item)}
+                            className="p-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center"
+                            title="Hubungi Tamu via WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4 text-emerald-600" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 rounded-2xl bg-zinc-50 border border-zinc-200/60 text-center flex flex-col items-center justify-center gap-2.5">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-zinc-900">
+                    Semua Reservasi Terkendali & Rapi
+                  </h4>
+                  <p className="text-xs text-zinc-500 mt-1 max-w-md mx-auto">
+                    {activeNotifTab === "checkout_due"
+                      ? "Tidak ada tamu yang telah melewati masa checkout dengan nota tertunda. Semua telah diselesaikan!"
+                      : activeNotifTab === "new_booking"
+                      ? "Tidak ada inquiry pemesanan baru yang menunggu respon saat ini."
+                      : "Semua reservasi dan nota telah diproses dengan baik."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* Quick Shortcuts Bar */}
           <div className="flex flex-wrap gap-2.5 items-center p-4 bg-white/90 rounded-3xl border border-zinc-200/80 backdrop-blur-md shadow-xs">
@@ -389,6 +1153,7 @@ export default function AdminDashboard() {
                       <th className="py-3.5 px-6">Check-in</th>
                       <th className="py-3.5 px-6">Total</th>
                       <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
@@ -424,12 +1189,22 @@ export default function AdminDashboard() {
                                 {st.label}
                               </span>
                             </td>
+                            <td className="py-4 px-6 text-right">
+                              <Link
+                                href={`/nota/${b.rawId}`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-100 hover:bg-[#ffdbcf]/50 text-zinc-700 hover:text-[#9f3c16] text-[11px] font-bold transition-colors"
+                              >
+                                <Receipt className="w-3 h-3" />
+                                <span>Nota</span>
+                              </Link>
+                            </td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-12 text-center text-zinc-400">
+                        <td colSpan={6} className="py-12 text-center text-zinc-400">
                           Belum ada inquiry yang masuk.
                         </td>
                       </tr>
@@ -493,6 +1268,21 @@ export default function AdminDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-5 py-3.5 rounded-2xl bg-zinc-900/95 backdrop-blur-md text-white text-xs font-bold shadow-2xl border border-zinc-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-2 text-zinc-400 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
