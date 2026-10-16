@@ -67,7 +67,7 @@ export default async function DetailPage({
   let propertyWhatsapp = "";
   let propertyRules = "";
   let propertyReviews: any[] = [];
-  let propertyRoomTypes: { id: string; name: string; capacity: number; totalUnits?: number; pricePerNight: number; facilities?: string; isAvailable: boolean; images: string[] }[] = [];
+  let propertyRoomTypes: { id: string; name: string; capacity: number; totalUnits?: number; availableUnits?: number; pricePerNight: number; facilities?: string; isAvailable: boolean; images: string[] }[] = [];
   let propertyHostName = "";
   let propertyHostTitle = "";
   let propertyResponseTime = "";
@@ -121,14 +121,16 @@ export default async function DetailPage({
           } else if (typeof rt.imageUrls === "string") {
             try { imgs = JSON.parse(rt.imageUrls).filter(Boolean); } catch { imgs = []; }
           }
+          const avail = rt.availableUnits !== undefined ? Number(rt.availableUnits) : undefined;
           return {
             id: rt.id,
             name: rt.name,
             capacity: Number(rt.capacity) || 2,
             totalUnits: Number(rt.totalUnits) || 1,
+            availableUnits: avail,
             pricePerNight: Number(rt.pricePerNight) || 0,
             facilities: rt.facilities || "",
-            isAvailable: rt.isAvailable !== false,
+            isAvailable: rt.isAvailable !== false && (avail === undefined || avail > 0),
             images: imgs,
           };
         }).filter((rt: any) => rt.name);
@@ -669,18 +671,18 @@ export default async function DetailPage({
                                     borderRadius: "999px",
                                     fontSize: "11px",
                                     fontWeight: 700,
-                                    background: (rt.totalUnits || 1) === 1 ? "#fef3c7" : "#d1fae5",
-                                    color: (rt.totalUnits || 1) === 1 ? "#92400e" : "#065f46",
-                                    border: `1px solid ${(rt.totalUnits || 1) === 1 ? "#fde68a" : "#a7f3d0"}`,
+                                    background: (rt.availableUnits !== undefined ? rt.availableUnits : rt.totalUnits || 1) === 1 ? "#fef3c7" : "#d1fae5",
+                                    color: (rt.availableUnits !== undefined ? rt.availableUnits : rt.totalUnits || 1) === 1 ? "#92400e" : "#065f46",
+                                    border: `1px solid ${(rt.availableUnits !== undefined ? rt.availableUnits : rt.totalUnits || 1) === 1 ? "#fde68a" : "#a7f3d0"}`,
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "4px",
                                   }}
                                 >
                                   <span className="material-symbols-outlined" style={{ fontSize: "13px" }}>check_circle</span>
-                                  {(rt.totalUnits || 1) === 1
+                                  {(rt.availableUnits !== undefined ? rt.availableUnits : rt.totalUnits || 1) === 1
                                     ? "Tersedia (Sisa 1 Kamar)"
-                                    : `Tersedia (${rt.totalUnits} Unit Kamar)`}
+                                    : `Tersedia (${rt.availableUnits !== undefined ? rt.availableUnits : rt.totalUnits} Unit Kamar)`}
                                 </span>
                               ) : (
                                 <span

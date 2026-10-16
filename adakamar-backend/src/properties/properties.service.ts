@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { FilterPropertyDto } from './dto/filter-property.dto';
-import { Prisma, PropertyStatus } from '@prisma/client';
+import { Prisma, PropertyStatus, InquiryStatus } from '@prisma/client';
 
 @Injectable()
 export class PropertiesService {
@@ -197,6 +197,57 @@ export class PropertiesService {
       throw new NotFoundException(`Penginapan dengan slug '${slug}' tidak ditemukan.`);
     }
 
+    // Hitung ketersediaan unit aktif untuk tiap tipe kamar saat ini
+    const activeInquiries = await this.prisma.inquiry.findMany({
+      where: {
+        propertyId: property.id,
+        status: { in: [InquiryStatus.NEW, InquiryStatus.CONTACTED, InquiryStatus.IN_PROGRESS] },
+      },
+      select: {
+        id: true,
+        roomTypeId: true,
+        roomTypeName: true,
+        checkInDate: true,
+        checkOutDate: true,
+        createdAt: true,
+      },
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 24 * 3600 * 1000);
+
+    const roomTypesWithAvailability = (property.roomTypes || []).map((rt) => {
+      const matching = activeInquiries.filter((inq) => {
+        const matchesRoom = inq.roomTypeId
+          ? inq.roomTypeId === rt.id
+          : Boolean(inq.roomTypeName && inq.roomTypeName.toLowerCase().trim() === rt.name.toLowerCase().trim());
+        if (!matchesRoom) return false;
+
+        if (inq.checkInDate && inq.checkOutDate) {
+          const inqIn = new Date(inq.checkInDate);
+          let inqOut = new Date(inq.checkOutDate);
+          if (inqOut <= inqIn) inqOut = new Date(inqIn.getTime() + 24 * 3600 * 1000);
+          return inqIn < tomorrow && inqOut > today;
+        }
+
+        if (!inq.checkInDate) {
+          const diffHours = (Date.now() - new Date(inq.createdAt).getTime()) / (1000 * 3600);
+          return diffHours <= 48;
+        }
+        return false;
+      });
+
+      const bookedCount = matching.length;
+      const availableUnits = Math.max(0, rt.totalUnits - bookedCount);
+      return {
+        ...rt,
+        bookedUnits: bookedCount,
+        availableUnits,
+        isAvailable: rt.isAvailable && availableUnits > 0,
+      };
+    });
+
     // Similar properties
     const similar = await this.prisma.property.findMany({
       where: {
@@ -215,7 +266,10 @@ export class PropertiesService {
     });
 
     return {
-      property,
+      property: {
+        ...property,
+        roomTypes: roomTypesWithAvailability,
+      },
       similar,
     };
   }

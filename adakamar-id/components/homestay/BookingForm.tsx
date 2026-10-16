@@ -144,6 +144,17 @@ export default function BookingForm({
   const finalTotal = Math.max(0, subtotal - promoDiscount);
   const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(n);
 
+  const handleCheckInChange = (val: string) => {
+    setCheckIn(val);
+    if (val) {
+      if (!checkOut || checkOut <= val) {
+        const nextDay = new Date(val);
+        nextDay.setDate(nextDay.getDate() + 1);
+        setCheckOut(nextDay.toISOString().split("T")[0]);
+      }
+    }
+  };
+
   const handleSelectRoom = (room: any) => {
     const isFull = room.isAvailable === false || (room.availableUnits !== undefined && room.availableUnits <= 0);
     if (isFull) {
@@ -221,6 +232,14 @@ export default function BookingForm({
     if (!guestPhone.trim()) { setError("Nomor WhatsApp wajib diisi."); return; }
     setLoading(true);
     try {
+      let finalCheckIn = checkIn || undefined;
+      let finalCheckOut = checkOut || undefined;
+      if (finalCheckIn && (!finalCheckOut || finalCheckOut <= finalCheckIn)) {
+        const nextDay = new Date(finalCheckIn);
+        nextDay.setDate(nextDay.getDate() + 1);
+        finalCheckOut = nextDay.toISOString().split("T")[0];
+      }
+
       const roomInfo = selectedRoomType ? `\n[Kamar: ${selectedRoomType.name} - Kapasitas ${selectedRoomType.capacity} orang]` : "";
       const promoInfo = appliedPromo
         ? `[PROMO: ${appliedPromo.promo?.code || promoCodeInput} (Hemat Rp ${fmt(promoDiscount)}) - Total: Rp ${fmt(finalTotal)}]`
@@ -233,8 +252,8 @@ export default function BookingForm({
         propertyId,
         guestName: guestName.trim(),
         guestPhone: guestPhone.trim(),
-        checkInDate: checkIn || undefined,
-        checkOutDate: checkOut || undefined,
+        checkInDate: finalCheckIn,
+        checkOutDate: finalCheckOut,
         guestCount,
         notes: combinedNotes,
         roomTypeName: selectedRoomType?.name || undefined,
@@ -299,11 +318,31 @@ export default function BookingForm({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderRadius: "10px", border: "1.5px solid #e8e7f1", overflow: "hidden", marginBottom: "12px" }}>
           <div style={{ padding: "10px 14px", borderRight: "1px solid #e8e7f1" }}>
             <div style={{ fontSize: "10px", fontWeight: 700, color: "#57423b", textTransform: "uppercase", marginBottom: "3px" }}>Check-in</div>
-            <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} min={new Date().toISOString().split("T")[0]} style={{ fontSize: "13px", fontWeight: 600, border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }} />
+            <input
+              type="date"
+              value={checkIn}
+              onChange={(e) => handleCheckInChange(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              style={{ fontSize: "13px", fontWeight: 600, border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }}
+            />
           </div>
           <div style={{ padding: "10px 14px" }}>
             <div style={{ fontSize: "10px", fontWeight: 700, color: "#57423b", textTransform: "uppercase", marginBottom: "3px" }}>Check-out</div>
-            <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} min={checkIn || new Date().toISOString().split("T")[0]} style={{ fontSize: "13px", fontWeight: 600, border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }} />
+            <input
+              type="date"
+              value={checkOut}
+              onChange={(e) => setCheckOut(e.target.value)}
+              min={
+                checkIn
+                  ? (() => {
+                      const d = new Date(checkIn);
+                      d.setDate(d.getDate() + 1);
+                      return d.toISOString().split("T")[0];
+                    })()
+                  : new Date().toISOString().split("T")[0]
+              }
+              style={{ fontSize: "13px", fontWeight: 600, border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }}
+            />
           </div>
         </div>
 

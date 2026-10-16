@@ -16,16 +16,33 @@ export class InquiriesService {
       throw new NotFoundException('Penginapan tidak ditemukan.');
     }
 
+    let roomTypeId = dto.roomTypeId || null;
+    if (!roomTypeId && dto.roomTypeName) {
+      const allRooms = await this.prisma.roomType.findMany({
+        where: { propertyId: dto.propertyId },
+      });
+      const matchRoom = allRooms.find(
+        (r) => r.name.toLowerCase().trim() === dto.roomTypeName!.toLowerCase().trim()
+      );
+      if (matchRoom) roomTypeId = matchRoom.id;
+    }
+
+    let checkInDate = dto.checkInDate ? new Date(dto.checkInDate) : null;
+    let checkOutDate = dto.checkOutDate ? new Date(dto.checkOutDate) : null;
+    if (checkInDate && checkOutDate && checkOutDate <= checkInDate) {
+      checkOutDate = new Date(checkInDate.getTime() + 24 * 3600 * 1000);
+    }
+
     const inquiry = await this.prisma.inquiry.create({
       data: {
         propertyId: dto.propertyId,
-        roomTypeId: dto.roomTypeId || null,
+        roomTypeId,
         roomTypeName: dto.roomTypeName || null,
         guestName: dto.guestName,
         guestPhone: dto.guestPhone,
         guestEmail: dto.guestEmail,
-        checkInDate: dto.checkInDate ? new Date(dto.checkInDate) : null,
-        checkOutDate: dto.checkOutDate ? new Date(dto.checkOutDate) : null,
+        checkInDate,
+        checkOutDate,
         guestCount: dto.guestCount || 2,
         notes: dto.notes,
         status: InquiryStatus.NEW,
