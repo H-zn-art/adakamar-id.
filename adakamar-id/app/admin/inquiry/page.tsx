@@ -1,7 +1,8 @@
 "use client";
 
 import AdminSidebar from "@/components/layout/AdminSidebar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { inquiriesApi } from "@/lib/api";
 import {
   ChevronRight,
@@ -77,14 +78,100 @@ function toWaNumber(phone: string): string {
   return digits;
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────
-export default function AdminInquiryPage() {
+function mapInquiryItem(i: any): InquiryItem {
+  const nights =
+    i.checkInDate && i.checkOutDate
+      ? Math.max(1, Math.round((new Date(i.checkOutDate).getTime() - new Date(i.checkInDate).getTime()) / (1000 * 3600 * 24)))
+      : 1;
+  const unitPrice = i.property?.price || 500000;
+  const rawTotal = unitPrice * nights;
+
+  // Ekstraksi promo & kupon diskon
+  const notesStr = i.notes || "";
+  const promoMatch = notesStr.match(/\[PROMO:\s*([A-Za-z0-9_-]+)(?:\s*\((?:Hemat|Diskon|Potongan)\s*Rp\s*([\d.,]+)\))?(?:\s*-\s*Total:\s*Rp\s*([\d.,]+))?\]/i);
+  const promoCode = promoMatch ? promoMatch[1].trim() : undefined;
+  const promoDiscount = promoMatch && promoMatch[2] ? parseInt(promoMatch[2].replace(/[.,]/g, ""), 10) || 0 : 0;
+
+  // Ekstraksi total estimasi final
+  let parsedFinalTotal: number | null = null;
+  if (promoMatch && promoMatch[3]) {
+    const p = parseInt(promoMatch[3].replace(/[.,]/g, ""), 10);
+    if (!isNaN(p) && p > 0) parsedFinalTotal = p;
+  }
+  if (parsedFinalTotal === null) {
+    const totalMatch = notesStr.match(/\[Total(?: Estimasi)?:\s*Rp\s*([\d.,]+)\]/i);
+    if (totalMatch && totalMatch[1]) {
+      const p = parseInt(totalMatch[1].replace(/[.,]/g, ""), 10);
+      if (!isNaN(p) && p > 0) parsedFinalTotal = p;
+    }
+  }
+
+  const totalAmount = parsedFinalTotal !== null
+    ? parsedFinalTotal
+    : promoDiscount > 0
+    ? Math.max(0, rawTotal - promoDiscount)
+    : rawTotal;
+
+  const subtotalAmount = promoDiscount > 0 ? (totalAmount + promoDiscount) : (rawTotal > 0 ? rawTotal : totalAmount);
+
+  const cleanNotes = notesStr
+    .replace(/\[Kamar:[^\]]*\]/gi, "")
+    .replace(/\[PROMO:[^\]]*\]/gi, "")
+    .replace(/\[Total(?: Estimasi)?:[^\]]*\]/gi, "")
+    .replace(/\[Ku?pon:[^\]]*\]/gi, "")
+    .trim();
+
+  return {
+    id: i.id,
+    code: `INQ-${i.id.slice(-6).toUpperCase()}`,
+    guestName: i.guestName,
+    guestPhone: i.guestPhone,
+    guestEmail: i.guestEmail || "-",
+    homestay: i.property?.name || "Homestay Terdaftar",
+    homestaySlug: i.property?.slug || "",
+    checkIn: i.checkInDate ? new Date(i.checkInDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
+    checkOut: i.checkOutDate ? new Date(i.checkOutDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
+    checkInRaw: i.checkInDate || "",
+    checkOutRaw: i.checkOutDate || "",
+    nights,
+    guestsCount: i.guestCount || 2,
+    totalAmount,
+    status: backendToFrontend(i.status),
+    notes: i.notes || "",
+    createdAt: new Date(i.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
+    propertyPrice: unitPrice,
+    promoCode,
+    promoDiscount,
+    subtotalAmount,
+    cleanNotes,
+    roomTypeName: (() => {
+      if (i.roomTypeName) return i.roomTypeName;
+      const match = (i.notes || "").match(/\[Kamar:\s*([^\]\-]+)/);
+      return match ? match[1].trim() : "";
+    })(),
+  };
+}
+
+// ── Main Page Content ─────────────────────────────────────────────────
+function AdminInquiryContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetId = searchParams.get("id");
+
   const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState<string | null>(null);
   const [notaCopied, setNotaCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const handleCloseModal = () => {
+    setSelectedInquiry(null);
+    if (targetId) {
+      router.replace("/admin/inquiry", { scroll: false });
+    }
+  };
 
   const getNotaUrl = (item: InquiryItem) => {
     const base = typeof window !== "undefined" ? window.location.origin : "https://adakamar.id";
@@ -115,90 +202,50 @@ export default function AdminInquiryPage() {
 
   const loadInquiries = async () => {
     try {
+      setLoading(true);
       const res = await inquiriesApi.list({ limit: 100 });
       if (res && Array.isArray(res.data)) {
-        const mapped: InquiryItem[] = res.data.map((i: any) => {
-          const nights =
-            i.checkInDate && i.checkOutDate
-              ? Math.max(1, Math.round((new Date(i.checkOutDate).getTime() - new Date(i.checkInDate).getTime()) / (1000 * 3600 * 24)))
-              : 1;
-          const unitPrice = i.property?.price || 500000;
-          const rawTotal = unitPrice * nights;
-
-          // Ekstraksi promo & kupon diskon
-          const notesStr = i.notes || "";
-          const promoMatch = notesStr.match(/\[PROMO:\s*([A-Za-z0-9_-]+)(?:\s*\((?:Hemat|Diskon|Potongan)\s*Rp\s*([\d.,]+)\))?(?:\s*-\s*Total:\s*Rp\s*([\d.,]+))?\]/i);
-          const promoCode = promoMatch ? promoMatch[1].trim() : undefined;
-          const promoDiscount = promoMatch && promoMatch[2] ? parseInt(promoMatch[2].replace(/[.,]/g, ""), 10) || 0 : 0;
-
-          // Ekstraksi total estimasi final
-          let parsedFinalTotal: number | null = null;
-          if (promoMatch && promoMatch[3]) {
-            const p = parseInt(promoMatch[3].replace(/[.,]/g, ""), 10);
-            if (!isNaN(p) && p > 0) parsedFinalTotal = p;
-          }
-          if (parsedFinalTotal === null) {
-            const totalMatch = notesStr.match(/\[Total(?: Estimasi)?:\s*Rp\s*([\d.,]+)\]/i);
-            if (totalMatch && totalMatch[1]) {
-              const p = parseInt(totalMatch[1].replace(/[.,]/g, ""), 10);
-              if (!isNaN(p) && p > 0) parsedFinalTotal = p;
-            }
-          }
-
-          const totalAmount = parsedFinalTotal !== null
-            ? parsedFinalTotal
-            : promoDiscount > 0
-            ? Math.max(0, rawTotal - promoDiscount)
-            : rawTotal;
-
-          const subtotalAmount = promoDiscount > 0 ? (totalAmount + promoDiscount) : (rawTotal > 0 ? rawTotal : totalAmount);
-
-          const cleanNotes = notesStr
-            .replace(/\[Kamar:[^\]]*\]/gi, "")
-            .replace(/\[PROMO:[^\]]*\]/gi, "")
-            .replace(/\[Total(?: Estimasi)?:[^\]]*\]/gi, "")
-            .replace(/\[Ku?pon:[^\]]*\]/gi, "")
-            .trim();
-
-          return {
-            id: i.id,
-            code: `INQ-${i.id.slice(-6).toUpperCase()}`,
-            guestName: i.guestName,
-            guestPhone: i.guestPhone,
-            guestEmail: i.guestEmail || "-",
-            homestay: i.property?.name || "Homestay Terdaftar",
-            homestaySlug: i.property?.slug || "",
-            checkIn: i.checkInDate ? new Date(i.checkInDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
-            checkOut: i.checkOutDate ? new Date(i.checkOutDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-",
-            checkInRaw: i.checkInDate || "",
-            checkOutRaw: i.checkOutDate || "",
-            nights,
-            guestsCount: i.guestCount || 2,
-            totalAmount,
-            status: backendToFrontend(i.status),
-            notes: i.notes || "",
-            createdAt: new Date(i.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
-            propertyPrice: unitPrice,
-            promoCode,
-            promoDiscount,
-            subtotalAmount,
-            cleanNotes,
-            // Parse tipe kamar: dari field langsung atau fallback dari string [Kamar: ...] di notes
-            roomTypeName: (() => {
-              if (i.roomTypeName) return i.roomTypeName;
-              const match = (i.notes || "").match(/\[Kamar:\s*([^\]\-]+)/);
-              return match ? match[1].trim() : "";
-            })(),
-          };
-        });
+        const mapped: InquiryItem[] = res.data.map(mapInquiryItem);
         setInquiries(mapped);
+
+        // Auto open modal jika ada parameter ?id=... dari notifikasi dashboard
+        if (targetId) {
+          const found = mapped.find(
+            (i) =>
+              i.id === targetId ||
+              i.code.toLowerCase() === targetId.toLowerCase() ||
+              i.id.slice(-6).toLowerCase() === targetId.toLowerCase()
+          );
+          if (found) {
+            setSelectedInquiry(found);
+          }
+        }
       }
     } catch (err) {
       console.warn("API load inquiries error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { loadInquiries(); }, []);
+  useEffect(() => {
+    loadInquiries();
+  }, []);
+
+  // Sinkronisasi targetId jika berubah (misal klik notifikasi saat sudah di halaman ini)
+  useEffect(() => {
+    if (targetId && inquiries.length > 0) {
+      const found = inquiries.find(
+        (i) =>
+          i.id === targetId ||
+          i.code.toLowerCase() === targetId.toLowerCase() ||
+          i.id.slice(-6).toLowerCase() === targetId.toLowerCase()
+      );
+      if (found) {
+        setSelectedInquiry(found);
+      }
+    }
+  }, [targetId, inquiries]);
 
   const filtered = inquiries.filter((inq) => {
     const matchSearch =
@@ -227,7 +274,7 @@ export default function AdminInquiryPage() {
     try {
       await inquiriesApi.remove(id);
       setInquiries((prev) => prev.filter((inq) => inq.id !== id));
-      if (selectedInquiry?.id === id) setSelectedInquiry(null);
+      if (selectedInquiry?.id === id) handleCloseModal();
     } catch (err) {
       console.warn("API delete inquiry error:", err);
     }
@@ -392,7 +439,12 @@ export default function AdminInquiryPage() {
 
       {/* Detail Modal */}
       {selectedInquiry && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseModal();
+          }}
+        >
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-zinc-200/80 flex flex-col gap-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
@@ -407,8 +459,9 @@ export default function AdminInquiryPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedInquiry(null)}
+                onClick={handleCloseModal}
                 className="w-8 h-8 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-400 hover:text-zinc-800 cursor-pointer transition-colors"
+                title="Tutup Modal"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -576,7 +629,7 @@ export default function AdminInquiryPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedInquiry(null)}
+                onClick={handleCloseModal}
                 className="px-4 py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold transition-colors cursor-pointer"
               >
                 Tutup
@@ -586,5 +639,19 @@ export default function AdminInquiryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminInquiryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-[#f8f7fb] min-h-screen flex items-center justify-center font-sans">
+          <Loader2 className="w-8 h-8 animate-spin text-[#9f3c16]" />
+        </div>
+      }
+    >
+      <AdminInquiryContent />
+    </Suspense>
   );
 }

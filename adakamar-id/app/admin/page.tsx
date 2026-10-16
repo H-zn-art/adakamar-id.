@@ -33,6 +33,7 @@ import {
   CalendarCheck,
   AlertCircle,
   Loader2,
+  Eye,
 } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; dot: string; text: string; bg: string }> = {
@@ -622,9 +623,14 @@ export default function AdminDashboard() {
                                     : "bg-emerald-500"
                                 }`}
                               />
-                              <span className="text-[11px] font-black text-zinc-900">
+                              <Link
+                                href={`/admin/inquiry?id=${n.rawId}`}
+                                onClick={() => setShowNotificationDropdown(false)}
+                                className="text-[11px] font-black text-zinc-900 hover:text-[#9f3c16] hover:underline transition-colors"
+                                title="Buka detail pemesanan"
+                              >
                                 {n.guest}
-                              </span>
+                              </Link>
                               <span className="text-[10px] font-mono text-zinc-400">
                                 {n.code}
                               </span>
@@ -632,8 +638,8 @@ export default function AdminDashboard() {
                             <span
                               className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
                                 n.type === "checkout_due"
-                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                    : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                               }`}
                             >
                               {n.type === "checkout_due" ? "Perlu Proses Nota" : "Booking Baru"}
@@ -664,7 +670,7 @@ export default function AdminDashboard() {
                                 <Link
                                   href={`/nota/${n.rawId}`}
                                   target="_blank"
-                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:opacity-95 shadow-xs"
+                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:opacity-95 shadow-xs transition-opacity"
                                 >
                                   <Receipt className="w-3 h-3" />
                                   <span>Proses Nota</span>
@@ -673,7 +679,7 @@ export default function AdminDashboard() {
                                   type="button"
                                   onClick={() => handleMarkCompleted(n.rawId)}
                                   disabled={updatingId === n.rawId}
-                                  className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                   title="Tandai Selesai"
                                 >
                                   {updatingId === n.rawId ? (
@@ -686,7 +692,7 @@ export default function AdminDashboard() {
                                 <button
                                   type="button"
                                   onClick={() => handleSendNotaWa(n)}
-                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                                   title="Kirim Nota via WA"
                                 >
                                   <MessageCircle className="w-3 h-3 text-emerald-600" />
@@ -696,28 +702,21 @@ export default function AdminDashboard() {
                             ) : (
                               <>
                                 <Link
-                                  href="/admin/inquiry"
-                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-zinc-900 text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:bg-zinc-800 shadow-xs"
+                                  href={`/admin/inquiry?id=${n.rawId}`}
+                                  onClick={() => setShowNotificationDropdown(false)}
+                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-zinc-900 text-white text-[10px] font-bold text-center flex items-center justify-center gap-1.5 hover:bg-zinc-800 shadow-xs transition-colors"
                                 >
-                                  <ArrowUpRight className="w-3 h-3" />
-                                  <span>Buka Inquiry</span>
-                                </Link>
-                                <Link
-                                  href={`/nota/${n.rawId}`}
-                                  target="_blank"
-                                  className="py-1.5 px-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1"
-                                >
-                                  <Receipt className="w-3 h-3" />
-                                  <span>Nota</span>
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Detail Pemesanan</span>
                                 </Link>
                                 <button
                                   type="button"
                                   onClick={() => handleContactGuestWa(n)}
-                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
-                                  title="Chat Tamu WhatsApp"
+                                  className="py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                                  title="Chat Tamu via WhatsApp"
                                 >
-                                  <MessageCircle className="w-3 h-3 text-emerald-600" />
-                                  <span>Chat</span>
+                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Chat Tamu</span>
                                 </button>
                               </>
                             )}
@@ -864,7 +863,13 @@ export default function AdminDashboard() {
                         return (
                           <tr key={b.id} className="hover:bg-zinc-50/80 transition-colors">
                             <td className="py-4 px-6 font-semibold text-zinc-900">
-                              {b.guest}
+                              <Link
+                                href={`/admin/inquiry?id=${b.rawId}`}
+                                className="hover:text-[#9f3c16] hover:underline transition-colors"
+                                title="Buka Detail Pemesanan"
+                              >
+                                {b.guest}
+                              </Link>
                             </td>
                             <td className="py-4 px-6 text-zinc-600 truncate max-w-[200px]">
                               <span className="font-semibold text-zinc-900 block truncate">{b.property}</span>
@@ -891,14 +896,27 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="py-4 px-6 text-right">
-                              <Link
-                                href={`/nota/${b.rawId}`}
-                                target="_blank"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-100 hover:bg-[#ffdbcf]/50 text-zinc-700 hover:text-[#9f3c16] text-[11px] font-bold transition-colors"
-                              >
-                                <Receipt className="w-3 h-3" />
-                                <span>Nota</span>
-                              </Link>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Link
+                                  href={`/admin/inquiry?id=${b.rawId}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-bold transition-colors"
+                                  title="Lihat Detail Pemesanan"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>Detail</span>
+                                </Link>
+                                {b.status === "completed" && (
+                                  <Link
+                                    href={`/nota/${b.rawId}`}
+                                    target="_blank"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-[11px] font-bold transition-colors"
+                                    title="Buka Nota Resmi"
+                                  >
+                                    <Receipt className="w-3 h-3" />
+                                    <span>Nota</span>
+                                  </Link>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
