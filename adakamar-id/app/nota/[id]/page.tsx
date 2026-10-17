@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<StatusKey, { label: string; color: string }> = {
   NEW:         { label: "Menunggu Konfirmasi", color: "#b45309" },
   CONTACTED:   { label: "Dikonfirmasi",        color: "#15803d" },
   IN_PROGRESS: { label: "Sedang Berlangsung",  color: "#1d4ed8" },
-  COMPLETED:   { label: "Selesai",             color: "#3f3f46" },
+  COMPLETED:   { label: "Selesai / Lunas",     color: "#15803d" },
   CANCELLED:   { label: "Dibatalkan",          color: "#be123c" },
 };
 
@@ -65,6 +65,8 @@ export default function NotaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sharingWa, setSharingWa] = useState(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -138,8 +140,20 @@ export default function NotaPage() {
   const statusInfo = STATUS_CONFIG[(data.status as StatusKey)] ?? STATUS_CONFIG.NEW;
   const issuedDate = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 
-  const waNumber = (data.property?.whatsappNumber || "085795445463").replace(/[^0-9]/g, "");
-  const waPhone = waNumber.startsWith("62") ? waNumber : waNumber.startsWith("0") ? "62" + waNumber.substring(1) : "62" + waNumber;
+  const guestRawPhone = (data.guestPhone || "").replace(/[^0-9]/g, "");
+  const guestWaPhone = guestRawPhone.startsWith("62")
+    ? guestRawPhone
+    : guestRawPhone.startsWith("0")
+    ? "62" + guestRawPhone.substring(1)
+    : "62" + guestRawPhone;
+
+  const propertyRawPhone = (data.property?.whatsappNumber || "085795445463").replace(/[^0-9]/g, "");
+  const propertyWaPhone = propertyRawPhone.startsWith("62")
+    ? propertyRawPhone
+    : propertyRawPhone.startsWith("0")
+    ? "62" + propertyRawPhone.substring(1)
+    : "62" + propertyRawPhone;
+
   const checkInFmt = data.checkInDate ? new Date(data.checkInDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Fleksibel";
   const checkOutFmt = data.checkOutDate ? new Date(data.checkOutDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "Fleksibel";
 
@@ -190,17 +204,40 @@ export default function NotaPage() {
     .trim();
 
   const waShareText = encodeURIComponent(
-    `Halo ${data.guestName}, berikut nota reservasi Anda di ${data.property?.name}:\n\n` +
-    `🔖 Kode: ${code}\n` +
+    `Halo Kak ${data.guestName}, terima kasih telah menginap di ${data.property?.name}.\n\n` +
+    `Masa menginap Anda telah selesai. Berikut tautan lembar nota resmi reservasi Anda:\n` +
+    `${typeof window !== "undefined" ? window.location.href : ""}\n\n` +
+    `🔖 Kode Reservasi: ${code}\n` +
     (roomTypeName ? `🛏️ Tipe Kamar: ${roomTypeName}\n` : "") +
     `📅 Check-in: ${checkInFmt}\n` +
     `📅 Check-out: ${checkOutFmt}\n` +
     `🌙 Durasi: ${nights} Malam\n` +
     (promoCode && promoDiscount > 0 ? `🎟️ Kupon Promo: ${promoCode} (Hemat Rp ${new Intl.NumberFormat("id-ID").format(promoDiscount)})\n` : "") +
-    (totalAmount > 0 ? `💰 Total Estimasi: Rp ${new Intl.NumberFormat("id-ID").format(totalAmount)}\n` : "") +
-    `\n📄 Lihat nota lengkap di:\n${typeof window !== "undefined" ? window.location.href : ""}\n\n` +
-    `Pembayaran dikonfirmasi langsung bersama pengelola. Terima kasih telah memilih ${data.property?.name}! 🙏`
+    (totalAmount > 0 ? `💰 Total: Rp ${new Intl.NumberFormat("id-ID").format(totalAmount)}\n` : "") +
+    `Status: Selesai / Lunas\n\n` +
+    `Silakan buka tautan di atas untuk melihat rincian, menyimpan, atau mencetak nota. Terima kasih dan semoga berkesan selama di Jogja! 🙏`
   );
+
+  const handleShareToGuestWa = async () => {
+    // 1. Buka percakapan WhatsApp ke tamu
+    const waUrl = `https://wa.me/${guestWaPhone}?text=${waShareText}`;
+    window.open(waUrl, "_blank");
+
+    // 2. Jika status belum COMPLETED, otomatis selesaikan reservasi di sistem
+    if (data.status !== "COMPLETED") {
+      try {
+        setSharingWa(true);
+        await inquiriesApi.updateStatus(data.id, "COMPLETED");
+        setData((prev: any) => (prev ? { ...prev, status: "COMPLETED" } : prev));
+        setShareToast("✓ Nota berhasil dibagikan & status reservasi otomatis SELESAI!");
+      } catch (err: any) {
+        console.warn("Auto update status error on share:", err);
+      } finally {
+        setSharingWa(false);
+        setTimeout(() => setShareToast(null), 4000);
+      }
+    }
+  };
 
   return (
     <>
@@ -208,6 +245,22 @@ export default function NotaPage() {
       <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
 
       <div className="min-h-screen bg-zinc-100 py-8 px-4">
+        {/* Toast Notifikasi Berhasil */}
+        {shareToast && (
+          <div className="no-print max-w-2xl mx-auto mb-4 p-3.5 bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-lg flex items-center justify-between gap-2 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{shareToast}</span>
+            </div>
+            <button
+              onClick={() => setShareToast(null)}
+              className="text-white/80 hover:text-white text-xs font-bold px-2 py-0.5 rounded cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Action Bar (no-print) */}
         <div className="no-print max-w-2xl mx-auto mb-6 flex items-center justify-between gap-3 flex-wrap">
           <a
@@ -220,23 +273,28 @@ export default function NotaPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-zinc-200 text-zinc-700 text-xs font-bold hover:bg-zinc-50 transition shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-zinc-200 text-zinc-700 text-xs font-bold hover:bg-zinc-50 transition shadow-xs cursor-pointer"
             >
               <Share2 className="w-3.5 h-3.5" />
               {copied ? "Tersalin!" : "Salin Link"}
             </button>
-            <a
-              href={`https://wa.me/${waPhone}?text=${waShareText}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
+            <button
+              type="button"
+              onClick={handleShareToGuestWa}
+              disabled={sharingWa}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-60"
+              title="Kirim Nota ke WhatsApp Tamu & Otomatis Selesaikan Reservasi"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Bagikan ke WhatsApp
-            </a>
+              {sharingWa ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <MessageCircle className="w-3.5 h-3.5" />
+              )}
+              {data.status === "COMPLETED" ? "Kirim ke WhatsApp Tamu" : "Kirim Nota & Selesaikan"}
+            </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#9f3c16] hover:bg-[#853010] text-white text-xs font-bold transition shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#9f3c16] hover:bg-[#853010] text-white text-xs font-bold transition shadow-sm cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               Cetak / PDF
@@ -371,7 +429,7 @@ export default function NotaPage() {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Hubungi Pengelola</p>
                 <a
-                  href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Halo, saya ${data.guestName} ingin konfirmasi reservasi di ${data.property?.name}.\n\n🔖 Kode: ${code}${roomTypeName ? `\n🛏️ Tipe Kamar: ${roomTypeName}` : ""}\nStatus: ${statusInfo.label}\n\nMohon bantuannya. Terima kasih!`)}`}
+                  href={`https://wa.me/${propertyWaPhone}?text=${encodeURIComponent(`Halo Pengelola ${data.property?.name}, saya ${data.guestName} ingin konfirmasi terkait nota reservasi: ${code}`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="no-print inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition"
@@ -410,20 +468,27 @@ export default function NotaPage() {
         <div className="no-print max-w-2xl mx-auto mt-6 flex items-center justify-center gap-3 flex-wrap">
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#9f3c16] hover:bg-[#853010] text-white text-sm font-bold shadow-lg shadow-[#9f3c16]/20 transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#9f3c16] hover:bg-[#853010] text-white text-sm font-bold shadow-lg shadow-[#9f3c16]/20 transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             Cetak Nota / Simpan PDF
           </button>
-          <a
-            href={`https://wa.me/${waPhone}?text=${waShareText}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all"
+          <button
+            type="button"
+            onClick={handleShareToGuestWa}
+            disabled={sharingWa}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-60"
+            title="Kirim Nota ke WhatsApp Tamu & Otomatis Selesaikan Reservasi"
           >
-            <MessageCircle className="w-4 h-4" />
-            Bagikan ke WhatsApp
-          </a>
+            {sharingWa ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <MessageCircle className="w-4 h-4" />
+            )}
+            {data.status === "COMPLETED"
+              ? "Bagikan Nota ke WhatsApp Tamu"
+              : "Kirim Nota ke WhatsApp Tamu & Selesaikan"}
+          </button>
         </div>
       </div>
     </>

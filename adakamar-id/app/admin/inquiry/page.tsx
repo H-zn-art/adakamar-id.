@@ -178,18 +178,28 @@ function AdminInquiryContent() {
     return `${base}/nota/${item.id}`;
   };
 
-  const handleShareNota = (item: InquiryItem) => {
+  const handleShareNota = async (item: InquiryItem) => {
     const url = getNotaUrl(item);
     const waPhone = toWaNumber(item.guestPhone);
     const roomInfo = item.roomTypeName ? `\n🛏️ Tipe Kamar: ${item.roomTypeName}` : "";
     const promoInfo = item.promoCode && (item.promoDiscount || 0) > 0
       ? `\n🎟️ Kupon Promo: ${item.promoCode} (Hemat Rp ${formatRupiah(item.promoDiscount || 0)})`
       : "";
-    const totalInfo = `\n💰 Total Estimasi: Rp ${formatRupiah(item.totalAmount)}`;
+    const totalInfo = `\n💰 Total: Rp ${formatRupiah(item.totalAmount)}`;
     const text = encodeURIComponent(
-      `Halo ${item.guestName}, berikut nota reservasi Anda di ${item.homestay}:${roomInfo}${promoInfo}${totalInfo}\n${url}\n\nKode: ${item.code}\nStatus: ${STATUS_MAP[item.status].label}\n\nSilakan buka link di atas untuk melihat, mencetak, atau menyimpan nota Anda. Terima kasih!`
+      `Halo Kak ${item.guestName}, terima kasih telah menginap di ${item.homestay}.\n\n` +
+      `Masa menginap Anda telah selesai. Berikut tautan nota resmi reservasi Anda:\n` +
+      `${url}${roomInfo}${promoInfo}${totalInfo}\n\n` +
+      `📋 Kode: ${item.code}\n` +
+      `Status: Selesai / Lunas\n\n` +
+      `Silakan buka link di atas untuk menyimpan atau mencetak nota. Terima kasih dan semoga berkunjung kembali ke Jogja! 🙏`
     );
     window.open(`https://wa.me/${waPhone}?text=${text}`, "_blank");
+
+    // Otomatis ubah status menjadi completed jika belum completed
+    if (item.status !== "completed") {
+      await handleUpdateStatus(item.id, "completed");
+    }
   };
 
   const handleCopyNotaLink = async (item: InquiryItem) => {
@@ -613,11 +623,16 @@ function AdminInquiryContent() {
                 <button
                   type="button"
                   onClick={() => handleShareNota(selectedInquiry)}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-xs font-bold transition-colors cursor-pointer"
-                  title="Bagikan Nota ke Customer"
+                  disabled={updating === selectedInquiry.id}
+                  className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60"
+                  title="Kirim Nota ke Tamu via WhatsApp & Otomatis Selesaikan Reservasi"
                 >
-                  <Printer className="w-4 h-4" />
-                  Kirim Nota
+                  {updating === selectedInquiry.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Receipt className="w-4 h-4" />
+                  )}
+                  <span>Kirim Nota &amp; Selesaikan</span>
                 </button>
               )}
               <button

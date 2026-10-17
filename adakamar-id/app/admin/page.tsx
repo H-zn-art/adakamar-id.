@@ -391,8 +391,8 @@ export default function AdminDashboard() {
     }
   };
 
-  // Aksi Kirim Nota ke WhatsApp Tamu
-  const handleSendNotaWa = (n: ReservationNotification) => {
+  // Aksi Kirim Nota ke WhatsApp Tamu & Otomatis Selesaikan Reservasi
+  const handleSendNotaWa = async (n: ReservationNotification) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://adakamar.id";
     const notaUrl = `${origin}/nota/${n.rawId}`;
     const phone = toWaNumber(n.guestPhone);
@@ -406,6 +406,19 @@ export default function AdminDashboard() {
       `Silakan buka link di atas untuk menyimpan atau mencetak nota. Terima kasih dan semoga berkunjung kembali ke Jogja! 🙏`
     );
     window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+
+    // Otomatis ubah status reservasi menjadi COMPLETED (Selesai) di sistem
+    try {
+      setUpdatingId(n.rawId);
+      await inquiriesApi.updateStatus(n.rawId, "COMPLETED");
+      setToastMessage("✓ Nota berhasil dikirim ke WhatsApp & status menginap otomatis SELESAI!");
+      await loadDashboardData(true);
+    } catch (err: any) {
+      console.warn("Auto complete reservation error:", err);
+    } finally {
+      setUpdatingId(null);
+      setTimeout(() => setToastMessage(null), 3500);
+    }
   };
 
   // Aksi Hubungi Tamu WhatsApp (Inquiry Baru)
@@ -667,36 +680,42 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-1.5 pt-1">
                             {n.type === "checkout_due" ? (
                               <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSendNotaWa(n)}
+                                  disabled={updatingId === n.rawId}
+                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-[10px] font-bold text-center flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                                  title="Kirim Nota via WhatsApp ke Tamu & Otomatis Selesaikan Reservasi"
+                                >
+                                  {updatingId === n.rawId ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Kirim Nota &amp; Selesaikan</span>
+                                </button>
                                 <Link
                                   href={`/nota/${n.rawId}`}
                                   target="_blank"
-                                  className="flex-1 py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-[#9f3c16] to-[#bf542c] text-white text-[10px] font-bold text-center flex items-center justify-center gap-1 hover:opacity-95 shadow-xs transition-opacity"
+                                  className="py-1.5 px-2.5 rounded-xl bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-[10px] font-bold flex items-center gap-1 transition-colors"
+                                  title="Buka / Cetak Lembar Nota Resmi"
                                 >
                                   <Receipt className="w-3 h-3" />
-                                  <span>Proses Nota</span>
+                                  <span>Lihat Nota</span>
                                 </Link>
                                 <button
                                   type="button"
                                   onClick={() => handleMarkCompleted(n.rawId)}
                                   disabled={updatingId === n.rawId}
-                                  className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                                  title="Tandai Selesai"
+                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                  title="Tandai Selesai Langsung"
                                 >
                                   {updatingId === n.rawId ? (
                                     <Loader2 className="w-3 h-3 animate-spin" />
                                   ) : (
-                                    <Check className="w-3 h-3" />
+                                    <Check className="w-3 h-3 text-emerald-600" />
                                   )}
                                   <span>Selesai</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSendNotaWa(n)}
-                                  className="py-1.5 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                                  title="Kirim Nota via WA"
-                                >
-                                  <MessageCircle className="w-3 h-3 text-emerald-600" />
-                                  <span>WA</span>
                                 </button>
                               </>
                             ) : (
