@@ -178,22 +178,49 @@ function AdminInquiryContent() {
     return `${base}/nota/${item.id}`;
   };
 
-  const handleShareNota = async (item: InquiryItem) => {
-    const url = getNotaUrl(item);
-    const waPhone = toWaNumber(item.guestPhone);
-    const roomInfo = item.roomTypeName ? `\n🛏️ Tipe Kamar: ${item.roomTypeName}` : "";
-    const promoInfo = item.promoCode && (item.promoDiscount || 0) > 0
-      ? `\n🎟️ Kupon Promo: ${item.promoCode} (Hemat Rp ${formatRupiah(item.promoDiscount || 0)})`
-      : "";
-    const totalInfo = `\n💰 Total: Rp ${formatRupiah(item.totalAmount)}`;
-    const text = encodeURIComponent(
-      `Halo Kak ${item.guestName}, terima kasih telah menginap di ${item.homestay}.\n\n` +
-      `Masa menginap Anda telah selesai. Berikut tautan nota resmi reservasi Anda:\n` +
-      `${url}${roomInfo}${promoInfo}${totalInfo}\n\n` +
-      `📋 Kode: ${item.code}\n` +
-      `Status: Selesai / Lunas\n\n` +
-      `Silakan buka link di atas untuk menyimpan atau mencetak nota. Terima kasih dan semoga berkunjung kembali ke Jogja! 🙏`
+  const getChatWaText = (item: InquiryItem) => {
+    // 1. Status Selesai: Ucapan terima kasih telah menginap & tautan nota resmi
+    if (item.status === "completed") {
+      const url = getNotaUrl(item);
+      const roomInfo = item.roomTypeName ? `\n🛏️ Tipe Kamar: ${item.roomTypeName}` : "";
+      const promoInfo = item.promoCode && (item.promoDiscount || 0) > 0
+        ? `\n🎟️ Kupon Promo: ${item.promoCode} (Hemat Rp ${formatRupiah(item.promoDiscount || 0)})`
+        : "";
+      const totalInfo = `\n💰 Total: Rp ${formatRupiah(item.totalAmount)}`;
+      return encodeURIComponent(
+        `Halo Kak ${item.guestName}, terima kasih telah menginap di ${item.homestay} melalui adakamar.id.\n\n` +
+        `Masa menginap Anda telah selesai. Berikut tautan nota resmi reservasi Anda:\n` +
+        `${url}${roomInfo}${promoInfo}${totalInfo}\n\n` +
+        `📋 Kode: ${item.code}\n` +
+        `Status: Selesai / Lunas\n\n` +
+        `Silakan buka link di atas untuk menyimpan atau mencetak nota Anda. Terima kasih dan semoga berkunjung kembali ke Jogja! 🙏`
+      );
+    }
+
+    // 2. Status Dibatalkan
+    if (item.status === "cancelled") {
+      return encodeURIComponent(
+        `Halo Kak ${item.guestName}, kami dari tim adakamar.id / Pengelola ${item.homestay}.\n\n` +
+        `Menindaklanjuti reservasi Anda di ${item.homestay} (Kode: ${item.code}) dengan status Dibatalkan.\n\n` +
+        `Jika ada pertanyaan atau ingin melakukan pemesanan ulang untuk jadwal lain, silakan beri tahu kami. Terima kasih! 🙏`
+      );
+    }
+
+    // 3. Status Menunggu, Dikonfirmasi, Berlangsung: Konfirmasi reservasi tamu
+    return encodeURIComponent(
+      `Halo Kak ${item.guestName}, kami dari tim adakamar.id / Pengelola ${item.homestay}.\n\n` +
+      `Permintaan reservasi Anda telah kami terima:${item.roomTypeName ? ` (Tipe Kamar: ${item.roomTypeName})` : ""}\n` +
+      `- Check-in: ${item.checkIn}\n` +
+      `- Check-out: ${item.checkOut}\n` +
+      `- Total Estimasi: Rp ${formatRupiah(item.totalAmount)}\n` +
+      `- Kode: ${item.code}\n\n` +
+      `Apakah jadwal menginap sudah sesuai? Kami siap membantu proses konfirmasi reservasi Anda. Terima kasih!`
     );
+  };
+
+  const handleShareNota = async (item: InquiryItem) => {
+    const waPhone = toWaNumber(item.guestPhone);
+    const text = getChatWaText(item.status === "completed" ? item : { ...item, status: "completed" });
     window.open(`https://wa.me/${waPhone}?text=${text}`, "_blank");
 
     // Otomatis ubah status menjadi completed jika belum completed
@@ -609,23 +636,39 @@ function AdminInquiryContent() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-4 border-t border-zinc-100">
-              <a
-                href={`https://wa.me/${toWaNumber(selectedInquiry.guestPhone)}?text=${encodeURIComponent(
-                  `Halo Kak ${selectedInquiry.guestName}, kami dari tim adakamar.id / Pengelola ${selectedInquiry.homestay}.\n\n` +
-                  `Permintaan reservasi Anda telah kami terima:${selectedInquiry.roomTypeName ? ` (Tipe Kamar: ${selectedInquiry.roomTypeName})` : ""}\n` +
-                  `- Check-in: ${selectedInquiry.checkIn}\n` +
-                  `- Check-out: ${selectedInquiry.checkOut}\n` +
-                  `- Total Estimasi: Rp ${formatRupiah(selectedInquiry.totalAmount)}\n` +
-                  `- Kode: ${selectedInquiry.code}\n\n` +
-                  `Apakah jadwal menginap sudah sesuai? Kami siap membantu proses konfirmasi reservasi Anda. Terima kasih!`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Chat via WhatsApp
-              </a>
+              {selectedInquiry.status === "completed" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleShareNota(selectedInquiry)}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                    title="Kirim Nota Resmi ke WhatsApp Tamu"
+                  >
+                    <Receipt className="w-4 h-4" />
+                    Kirim Nota via WhatsApp
+                  </button>
+                  <a
+                    href={getNotaUrl(selectedInquiry)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-3 rounded-2xl bg-[#ffdbcf]/60 hover:bg-[#ffdbcf] text-[#9f3c16] text-xs font-bold flex items-center gap-1.5 transition-colors"
+                    title="Buka / Cetak Lembar Nota Resmi"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Lihat Nota
+                  </a>
+                </>
+              ) : (
+                <a
+                  href={`https://wa.me/${toWaNumber(selectedInquiry.guestPhone)}?text=${getChatWaText(selectedInquiry)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Chat via WhatsApp
+                </a>
+              )}
               <button
                 type="button"
                 onClick={() => handleDelete(selectedInquiry.id)}
