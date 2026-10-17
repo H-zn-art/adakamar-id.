@@ -610,7 +610,15 @@ function AdminInquiryContent() {
             {/* Actions */}
             <div className="flex items-center gap-2 pt-4 border-t border-zinc-100">
               <a
-                href={`https://wa.me/${toWaNumber(selectedInquiry.guestPhone)}?text=${encodeURIComponent(`Halo ${selectedInquiry.guestName}, kami dari Tim AdaKamar.id menghubungi terkait reservasi Anda:\n\n\uD83C\uDFE0 Penginapan: ${selectedInquiry.homestay}${selectedInquiry.roomTypeName ? `\n\uD83D\uDECF\uFE0F Tipe Kamar: ${selectedInquiry.roomTypeName}` : ""}\n\uD83D\uDCC5 Check-in: ${selectedInquiry.checkIn}\n\uD83D\uDCC5 Check-out: ${selectedInquiry.checkOut}\n\uD83D\uDC65 Tamu: ${selectedInquiry.guestsCount} Orang${selectedInquiry.promoCode && (selectedInquiry.promoDiscount || 0) > 0 ? `\n🎟️ Kupon Promo: ${selectedInquiry.promoCode} (-Rp ${formatRupiah(selectedInquiry.promoDiscount || 0)})` : ""}\n💰 Total Estimasi: Rp ${formatRupiah(selectedInquiry.totalAmount)}\n\uD83D\uDD16 Kode: ${selectedInquiry.code}\nStatus: ${STATUS_MAP[selectedInquiry.status].label}\n\nAda informasi lebih lanjut yang ingin dikonfirmasi?`)}`}
+                href={`https://wa.me/${toWaNumber(selectedInquiry.guestPhone)}?text=${encodeURIComponent(
+                  `Halo Kak ${selectedInquiry.guestName}, kami dari tim adakamar.id / Pengelola ${selectedInquiry.homestay}.\n\n` +
+                  `Permintaan reservasi Anda telah kami terima:${selectedInquiry.roomTypeName ? ` (Tipe Kamar: ${selectedInquiry.roomTypeName})` : ""}\n` +
+                  `- Check-in: ${selectedInquiry.checkIn}\n` +
+                  `- Check-out: ${selectedInquiry.checkOut}\n` +
+                  `- Total Estimasi: Rp ${formatRupiah(selectedInquiry.totalAmount)}\n` +
+                  `- Kode: ${selectedInquiry.code}\n\n` +
+                  `Apakah jadwal menginap sudah sesuai? Kami siap membantu proses konfirmasi reservasi Anda. Terima kasih!`
+                )}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
