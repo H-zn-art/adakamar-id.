@@ -626,23 +626,6 @@ function AdminInquiryContent() {
                 <MessageCircle className="w-4 h-4" />
                 Chat via WhatsApp
               </a>
-              {/* Tombol nota juga tersedia untuk status lain */}
-              {selectedInquiry.status !== "completed" && (
-                <button
-                  type="button"
-                  onClick={() => handleShareNota(selectedInquiry)}
-                  disabled={updating === selectedInquiry.id}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60"
-                  title="Kirim Nota ke Tamu via WhatsApp & Otomatis Selesaikan Reservasi"
-                >
-                  {updating === selectedInquiry.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Receipt className="w-4 h-4" />
-                  )}
-                  <span>Kirim Nota &amp; Selesaikan</span>
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => handleDelete(selectedInquiry.id)}
