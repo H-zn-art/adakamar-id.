@@ -243,10 +243,18 @@ export default function FacilitySelector({
 
   // Handle klik toggle fasilitas
   const handleToggle = (item: FacilityItem) => {
-    const identifier = valueType === "id" && item.id ? item.id : item.name;
-    if (selectedValues.includes(identifier)) {
-      onChange(selectedValues.filter((v) => v !== identifier));
+    const isChecked =
+      (Boolean(item.id) && selectedValues.includes(item.id!)) ||
+      selectedValues.includes(item.name);
+
+    if (isChecked) {
+      onChange(
+        selectedValues.filter(
+          (v) => (item.id ? v !== item.id : true) && v !== item.name
+        )
+      );
     } else {
+      const identifier = valueType === "id" && item.id ? item.id : item.name;
       onChange([...selectedValues, identifier]);
     }
   };
@@ -356,11 +364,13 @@ export default function FacilitySelector({
         {filteredFacilities.length > 0 ? (
           filteredFacilities.map((item) => {
             const identifier = valueType === "id" && item.id ? item.id : item.name;
-            const isChecked = selectedValues.includes(identifier);
+            const isChecked =
+              (Boolean(item.id) && selectedValues.includes(item.id!)) ||
+              selectedValues.includes(item.name);
 
             return (
               <button
-                key={identifier}
+                key={item.id || item.name}
                 type="button"
                 onClick={() => handleToggle(item)}
                 className={`group px-3 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer select-none ${

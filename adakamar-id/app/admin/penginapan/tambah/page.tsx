@@ -256,18 +256,20 @@ function AddEditPenginapanContent() {
       }
 
       const facilityIds: string[] = [];
-      if (backendFacilities.length > 0) {
-        formData.amenities.forEach((amenityName) => {
-          const matched = backendFacilities.find(
-            (f) =>
-              f.name.toLowerCase().includes(amenityName.toLowerCase()) ||
-              amenityName.toLowerCase().includes(f.name.toLowerCase())
-          );
-          if (matched && !facilityIds.includes(matched.id)) {
-            facilityIds.push(matched.id);
-          }
-        });
-      }
+      formData.amenities.forEach((amenityName) => {
+        const trimmed = amenityName.trim();
+        if (!trimmed) return;
+        const matched = backendFacilities.find(
+          (f) =>
+            f.name.toLowerCase().includes(trimmed.toLowerCase()) ||
+            trimmed.toLowerCase().includes(f.name.toLowerCase())
+        );
+        if (matched) {
+          if (!facilityIds.includes(matched.id)) facilityIds.push(matched.id);
+        } else {
+          if (!facilityIds.includes(trimmed)) facilityIds.push(trimmed);
+        }
+      });
 
       const payload = {
         name: formData.name.trim(),

@@ -339,7 +339,9 @@ export default function AdminPenginapanPage() {
         status: fullData.status || "ACTIVE",
         isFeatured: Boolean(fullData.isFeatured),
         facilityIds: Array.isArray(fullData.facilities)
-          ? fullData.facilities.map((f: any) => f.facilityId || f.id)
+          ? fullData.facilities
+              .map((f: any) => f.facilityId || f.facility?.id || f.id)
+              .filter(Boolean)
           : [],
         imageUrl: primaryPhoto,
         additionalImages: otherPhotos,
@@ -412,6 +414,7 @@ export default function AdminPenginapanPage() {
         setEditingProperty(null);
         setFormProp(initialForm);
         await loadProperties();
+        await fetchDependencies();
       } else {
         const newProp = await propertiesApi.create(payload);
         if (newProp?.id) {
@@ -439,6 +442,7 @@ export default function AdminPenginapanPage() {
         setFormProp(initialForm);
         setFormRoomTypes([{ ...initialRoomType }]);
         await loadProperties();
+        await fetchDependencies();
         showToast("success", `✓ Penginapan "${formProp.name}" berhasil ditambahkan!`);
       }
     } catch (err: any) {
@@ -1022,7 +1026,7 @@ export default function AdminPenginapanPage() {
                     description="Pilih fasilitas yang tersedia di homestay (tampilan ringkas &amp; hemat frame)"
                     placeholderSearch="Cari fasilitas homestay (AC, WiFi, Kolam Renang)..."
                     size="compact"
-                    allowCustom={false}
+                    allowCustom={true}
                   />
                 </div>
 

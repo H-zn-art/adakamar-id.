@@ -274,6 +274,56 @@ export class PropertiesService {
     };
   }
 
+  /**
+   * Mengubah daftar ID atau nama fasilitas menjadi daftar facilityId yang valid di database.
+   * Jika ada fasilitas yang belum ada di database (misal dari preset atau kustom),
+   * otomatis dibuatkan record baru di tabel Facility agar relasi foreign key tidak gagal.
+   */
+  private async resolveFacilityIds(identifiers: string[]): Promise<string[]> {
+    if (!identifiers || !Array.isArray(identifiers) || identifiers.length === 0) return [];
+
+    const cleaned = identifiers
+      .map((id) => (typeof id === 'string' ? id.trim() : ''))
+      .filter((id) => Boolean(id));
+
+    const uniqueIdentifiers = Array.from(new Set(cleaned));
+    const resolvedIds: string[] = [];
+
+    for (const item of uniqueIdentifiers) {
+      // 1. Cek apakah item adalah ID fasilitas yang sudah terdaftar
+      const byId = await this.prisma.facility.findUnique({ where: { id: item } });
+      if (byId) {
+        resolvedIds.push(byId.id);
+        continue;
+      }
+
+      // 2. Cek apakah ada fasilitas dengan nama yang sama
+      let byName = await this.prisma.facility.findFirst({
+        where: { name: item },
+      });
+      if (!byName) {
+        const allFacs = await this.prisma.facility.findMany();
+        byName = allFacs.find((f) => f.name.toLowerCase().trim() === item.toLowerCase().trim()) || null;
+      }
+      if (byName) {
+        resolvedIds.push(byName.id);
+        continue;
+      }
+
+      // 3. Jika belum ada di tabel facilities, otomatis buat baru agar foreign key aman
+      const newFacility = await this.prisma.facility.create({
+        data: {
+          name: item,
+          category: 'Umum',
+          icon: 'check_circle',
+        },
+      });
+      resolvedIds.push(newFacility.id);
+    }
+
+    return Array.from(new Set(resolvedIds));
+  }
+
   async create(dto: CreatePropertyDto) {
     const slug = this.slugify(dto.name);
     const existing = await this.prisma.property.findUnique({ where: { slug } });
@@ -282,6 +332,12 @@ export class PropertiesService {
     }
 
     const { facilityIds, imageUrls, ...data } = dto;
+    const resolvedFacilityIds = facilityIds && Array.isArray(facilityIds)
+      ? await this.resolveFacilityIds(facilityIds)
+      : [];
+
+    if (data.locationId === '') data.locationId = undefined;
+    if (data.categoryId === '') data.categoryId = undefined;
 
     return this.prisma.property.create({
       data: {
@@ -297,9 +353,9 @@ export class PropertiesService {
               })),
             }
           : undefined,
-        facilities: facilityIds
+        facilities: resolvedFacilityIds.length > 0
           ? {
-              create: facilityIds.map((fId) => ({
+              create: resolvedFacilityIds.map((fId) => ({
                 facilityId: fId,
               })),
             }
@@ -321,6 +377,9 @@ export class PropertiesService {
     const { facilityIds, imageUrls, ...data } = dto;
     const slug = dto.name ? this.slugify(dto.name) : property.slug;
 
+    if (data.locationId === '') data.locationId = undefined;
+    if (data.categoryId === '') data.categoryId = undefined;
+
     if (imageUrls && Array.isArray(imageUrls)) {
       await this.prisma.propertyImage.deleteMany({ where: { propertyId: id } });
       if (imageUrls.length > 0) {
@@ -336,10 +395,11 @@ export class PropertiesService {
     }
 
     if (facilityIds && Array.isArray(facilityIds)) {
+      const resolvedFacilityIds = await this.resolveFacilityIds(facilityIds);
       await this.prisma.propertyFacility.deleteMany({ where: { propertyId: id } });
-      if (facilityIds.length > 0) {
+      if (resolvedFacilityIds.length > 0) {
         await this.prisma.propertyFacility.createMany({
-          data: facilityIds.map((fId) => ({
+          data: resolvedFacilityIds.map((fId) => ({
             propertyId: id,
             facilityId: fId,
           })),
