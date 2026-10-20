@@ -252,8 +252,8 @@ export default function FacilitySelector({
   };
 
   // Handle tambah fasilitas custom
-  const handleAddCustom = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddCustom = (e?: React.FormEvent | React.KeyboardEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     const trimmed = customInput.trim();
     if (!trimmed) return;
     if (!selectedValues.includes(trimmed)) {
@@ -392,23 +392,30 @@ export default function FacilitySelector({
 
       {/* Custom Facility Input (Bila admin ingin mengetik fasilitas tambahan) */}
       {allowCustom && (
-        <form onSubmit={handleAddCustom} className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2 pt-1">
           <input
             type="text"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddCustom(e);
+              }
+            }}
             placeholder="+ Tambah fasilitas lainnya..."
             className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-dashed border-zinc-300 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-[#9f3c16] focus:border-solid transition"
           />
           <button
-            type="submit"
+            type="button"
+            onClick={handleAddCustom}
             disabled={!customInput.trim()}
             className="px-3 py-1.5 rounded-xl bg-zinc-900 text-white text-xs font-bold hover:bg-zinc-800 disabled:opacity-40 transition-colors flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3 h-3" />
             <span>Tambah</span>
           </button>
-        </form>
+        </div>
       )}
     </div>
   );
