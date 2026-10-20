@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { propertiesApi, locationsApi, categoriesApi, facilitiesApi, articlesApi } from "@/lib/api";
+import FacilitySelector from "@/components/admin/FacilitySelector";
 import {
   ChevronRight,
   Home,
@@ -761,10 +762,10 @@ function AddEditPenginapanContent() {
                       </div>
                       <div>
                         <h2 className="text-base font-extrabold text-zinc-950">
-                          Fasilitas & Amenitas Terverifikasi
+                          Fasilitas &amp; Amenitas Terverifikasi
                         </h2>
                         <p className="text-xs text-zinc-500">
-                          Pilih amenitas yang tersedia langsung di homestay
+                          Pilih amenitas yang tersedia langsung di homestay (tampilan simpel &amp; hemat tempat)
                         </p>
                       </div>
                     </div>
@@ -773,29 +774,15 @@ function AddEditPenginapanContent() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {allAmenities.map((amenity) => {
-                      const isChecked = formData.amenities.includes(amenity);
-                      return (
-                        <label
-                          key={amenity}
-                          className={`flex items-center gap-3 p-3.5 rounded-2xl border text-xs cursor-pointer transition-all ${
-                            isChecked
-                              ? "bg-[#ffdbcf]/50 border-[#9f3c16] text-[#9f3c16] font-bold shadow-xs"
-                              : "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleToggleAmenity(amenity)}
-                            className="w-4 h-4 accent-[#9f3c16] rounded-md cursor-pointer"
-                          />
-                          <span>{amenity}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <FacilitySelector
+                    availableFacilities={backendFacilities}
+                    selectedValues={formData.amenities}
+                    onChange={(newAmenities) => setFormData({ ...formData, amenities: newAmenities })}
+                    valueType="name"
+                    label=""
+                    placeholderSearch="Cari fasilitas homestay (mis: AC, Kolam Renang, WiFi, Water Heater)..."
+                    allowCustom={true}
+                  />
                 </div>
 
                 {/* Bagian 4: Lokasi, Aturan & WhatsApp */}

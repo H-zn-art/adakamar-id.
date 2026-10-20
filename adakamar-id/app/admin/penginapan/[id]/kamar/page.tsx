@@ -4,6 +4,7 @@ import AdminSidebar from "@/components/layout/AdminSidebar";
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { propertiesApi, roomTypesApi, facilitiesApi } from "@/lib/api";
+import FacilitySelector from "@/components/admin/FacilitySelector";
 import {
   Plus, Pencil, Trash2, Loader2, BedDouble,
   Users, CheckCircle2, XCircle, ArrowLeft, Save, X, Info, Check, FileUp, ImageOff,
@@ -509,77 +510,22 @@ export default function KamarManagementPage() {
                 </div>
               </div>
 
-              {/* Facilities */}
+              {/* Facilities — Gaya Mamikos Simpel & Hemat Frame */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-zinc-700">Fasilitas Kamar</label>
-                  {selectedFacilities.length > 0 && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9f3c16] text-white">
-                      {selectedFacilities.length} dipilih
-                    </span>
-                  )}
-                </div>
-                {availableFacilities.length > 0 ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      {availableFacilities.map((fac: any) => {
-                        const isChecked = selectedFacilities.includes(fac.name);
-                        return (
-                          <button
-                            key={fac.id}
-                            type="button"
-                            onClick={() => toggleFacility(fac.name)}
-                            className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 cursor-pointer transition-all text-center group ${
-                              isChecked
-                                ? "bg-[#ffdbcf]/30 border-[#9f3c16] shadow-sm"
-                                : "bg-white border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
-                            }`}
-                          >
-                            {isChecked && (
-                              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#9f3c16] flex items-center justify-center">
-                                <Check className="w-2.5 h-2.5 text-white" />
-                              </span>
-                            )}
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                              isChecked
-                                ? "bg-[#9f3c16] text-white"
-                                : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200"
-                            }`}>
-                              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
-                                {fac.icon || "check_circle"}
-                              </span>
-                            </div>
-                            <span className={`text-[10px] font-semibold leading-tight line-clamp-2 ${
-                              isChecked ? "text-[#9f3c16]" : "text-zinc-600"
-                            }`}>
-                              {fac.name}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedFacilities.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedFacilities([])}
-                        className="mt-2 text-[10px] text-zinc-400 hover:text-rose-500 font-medium transition-colors"
-                      >
-                        × Hapus semua pilihan fasilitas
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      value={form.facilities}
-                      onChange={e => setForm(p => ({ ...p, facilities: e.target.value }))}
-                      placeholder="AC, TV, Kamar Mandi Dalam, Air Panas, WiFi"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 text-sm focus:outline-none focus:border-[#9f3c16] focus:ring-2 focus:ring-[#9f3c16]/10 transition"
-                    />
-                    <p className="text-[11px] text-zinc-400 mt-1">Pisahkan dengan koma</p>
-                  </>
-                )}
+                <FacilitySelector
+                  availableFacilities={availableFacilities}
+                  selectedValues={selectedFacilities}
+                  onChange={(newVals) => {
+                    setSelectedFacilities(newVals);
+                    setForm((p) => ({ ...p, facilities: newVals.join(", ") }));
+                  }}
+                  valueType="name"
+                  label="Fasilitas Kamar"
+                  description="Pilih amenitas spesifik kamar ini (ringkas &amp; hemat tempat)"
+                  placeholderSearch="Cari fasilitas kamar (AC, Kasur, Kamar Mandi, TV)..."
+                  size="compact"
+                  allowCustom={true}
+                />
               </div>
 
               {/* ── Foto Kamar ── */}
