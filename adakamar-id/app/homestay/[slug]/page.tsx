@@ -157,13 +157,49 @@ export default async function DetailPage({
     // Use static defaults if API is unavailable
   }
 
+function resolveFacilityIcon(name: string, rawIcon?: string): string {
+  if (rawIcon && rawIcon !== "check_circle" && rawIcon.trim().length > 0) {
+    return rawIcon.trim();
+  }
+  const n = (name || "").toLowerCase();
+  if (n.includes("ac") || n.includes("air conditioner")) return "ac_unit";
+  if (n.includes("kamar mandi") || n.includes("toilet")) return "bathroom";
+  if (n.includes("water heater") || n.includes("air panas")) return "hot_tub";
+  if (n.includes("shower")) return "shower";
+  if (n.includes("kloset") || n.includes("bidet")) return "wc";
+  if (n.includes("wastafel")) return "wash";
+  if (n.includes("handuk")) return "shower";
+  if (n.includes("tv")) return "tv";
+  if (n.includes("wifi") || n.includes("wi-fi") || n.includes("internet")) return "wifi";
+  if (n.includes("kolam") || n.includes("renang") || n.includes("pool")) return "pool";
+  if (n.includes("dapur") || n.includes("masak") || n.includes("kulkas")) return "kitchen";
+  if (n.includes("dispenser") || n.includes("minum")) return "local_drink";
+  if (n.includes("sarapan") || n.includes("makan")) return "restaurant";
+  if (n.includes("parkir") && n.includes("motor")) return "two_wheeler";
+  if (n.includes("parkir")) return "local_parking";
+  if (n.includes("pendopo") || n.includes("gazebo") || n.includes("bale")) return "deck";
+  if (n.includes("mesin cuci") || n.includes("cuci")) return "local_laundry_service";
+  if (n.includes("cctv") || n.includes("keamanan") || n.includes("security")) return "security";
+  if (n.includes("akses")) return "lock_open";
+  if (n.includes("taman")) return "yard";
+  if (n.includes("bbq")) return "outdoor_grill";
+  if (n.includes("meja") || n.includes("kursi") || n.includes("kerja") || n.includes("workstation")) return "desk";
+  if (n.includes("kasur") || n.includes("bed")) return "bed";
+  if (n.includes("kipas")) return "mode_fan";
+  if (n.includes("lemari")) return "inventory_2";
+  if (n.includes("balkon") || n.includes("teras")) return "balcony";
+  if (n.includes("merokok") || n.includes("rokok")) return "smoke_free";
+  if (n.includes("alam")) return "nature";
+  return rawIcon || "check_circle";
+}
+
   // Fallback default image (only used when no images uploaded at all)
   const defaultImage = "/placeholder-homestay.jpg";
   const mainImage = propertyImages[0] || defaultImage;
 
-  // Build amenities list from DB facilities (use icon from DB directly)
+  // Build amenities list from DB facilities (with smart icon resolution)
   const amenities = propertyFacilities.map((f) => ({
-    icon: f.icon || "check_circle",
+    icon: resolveFacilityIcon(f.name, f.icon),
     label: f.name,
   }));
 
@@ -726,9 +762,15 @@ export default async function DetailPage({
                                   border: "1px solid #f3d5ca",
                                   color: "#57423b",
                                   fontWeight: 600,
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
                                 }}
                               >
-                                {fac}
+                                <span className="material-symbols-outlined" style={{ fontSize: "13px", color: "#9f3c16" }}>
+                                  {resolveFacilityIcon(fac)}
+                                </span>
+                                <span>{fac}</span>
                               </span>
                             ))}
                           </div>

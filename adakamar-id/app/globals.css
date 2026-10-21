@@ -191,6 +191,7 @@
 
 /* ─── Material Symbols config ─── */
 .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
   font-variation-settings:
     'FILL' 0,
     'wght' 400,

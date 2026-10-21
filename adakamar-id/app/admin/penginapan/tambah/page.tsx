@@ -783,7 +783,7 @@ function AddEditPenginapanContent() {
                     valueType="name"
                     label=""
                     placeholderSearch="Cari fasilitas homestay (mis: AC, Kolam Renang, WiFi, Water Heater)..."
-                    allowCustom={true}
+                    allowCustom={false}
                   />
                 </div>
 

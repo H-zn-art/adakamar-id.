@@ -524,7 +524,7 @@ export default function KamarManagementPage() {
                   description="Pilih amenitas spesifik kamar ini (ringkas &amp; hemat tempat)"
                   placeholderSearch="Cari fasilitas kamar (AC, Kasur, Kamar Mandi, TV)..."
                   size="compact"
-                  allowCustom={true}
+                  allowCustom={false}
                 />
               </div>
 

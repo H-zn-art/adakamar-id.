@@ -1026,7 +1026,7 @@ export default function AdminPenginapanPage() {
                     description="Pilih fasilitas yang tersedia di homestay (tampilan ringkas &amp; hemat frame)"
                     placeholderSearch="Cari fasilitas homestay (AC, WiFi, Kolam Renang)..."
                     size="compact"
-                    allowCustom={true}
+                    allowCustom={false}
                   />
                 </div>
 
@@ -1384,7 +1384,7 @@ export default function AdminPenginapanPage() {
                             description="Pilih fasilitas spesifik tipe kamar ini"
                             placeholderSearch="Cari fasilitas kamar..."
                             size="compact"
-                            allowCustom={true}
+                            allowCustom={false}
                           />
                         </div>
 

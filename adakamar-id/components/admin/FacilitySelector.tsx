@@ -165,13 +165,13 @@ export default function FacilitySelector({
   description,
   placeholderSearch = "Cari fasilitas (mis: AC, WiFi, Water Heater)...",
   size = "normal",
-  allowCustom = true,
+  allowCustom = false,
 }: FacilitySelectorProps) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [customInput, setCustomInput] = useState("");
 
-  // Gabungkan fasilitas backend dan preset default agar pilihan selalu lengkap
+  // Ambil fasilitas dari master backend. Hanya gunakan preset jika master data kosong.
   const mergedFacilities = useMemo(() => {
     const list: FacilityItem[] = [];
     const seenNames = new Set<string>();
@@ -190,17 +190,17 @@ export default function FacilitySelector({
           });
         }
       });
+    } else {
+      // Fallback hanya jika master fasilitas dari backend belum ada
+      DEFAULT_PRESET_FACILITIES.forEach((def) => {
+        if (!seenNames.has(def.name.toLowerCase())) {
+          seenNames.add(def.name.toLowerCase());
+          list.push(def);
+        }
+      });
     }
 
-    // Masukkan preset default jika belum ada di list
-    DEFAULT_PRESET_FACILITIES.forEach((def) => {
-      if (!seenNames.has(def.name.toLowerCase())) {
-        seenNames.add(def.name.toLowerCase());
-        list.push(def);
-      }
-    });
-
-    // Masukkan juga selectedValues yang mungkin belum ada di list (custom facilities)
+    // Masukkan juga selectedValues yang mungkin belum ada di list (agar pilihan sebelumnya tidak hilang)
     selectedValues.forEach((val) => {
       if (valueType === "name" && val && !seenNames.has(val.toLowerCase())) {
         seenNames.add(val.toLowerCase());
@@ -427,6 +427,20 @@ export default function FacilitySelector({
           </button>
         </div>
       )}
+
+      {/* Link ke Master Data Fasilitas */}
+      <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5 px-0.5">
+        <span>Fasilitas dikelola terpusat dari master data.</span>
+        <a
+          href="/admin/fasilitas"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#9f3c16] hover:text-[#7f2f11] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+        >
+          <span>Buka Kelola Fasilitas</span>
+          <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+        </a>
+      </div>
     </div>
   );
 }
