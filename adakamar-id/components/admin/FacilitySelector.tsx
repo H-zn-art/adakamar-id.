@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Check, Plus, X, Sparkles, RotateCcw } from "lucide-react";
+import { Search, Check, Plus, X, Sparkles } from "lucide-react";
 
 export interface FacilityItem {
   id?: string;
@@ -41,9 +41,9 @@ const DEFAULT_PRESET_FACILITIES: FacilityItem[] = [
   { name: "Lemari Pakaian", category: "kamar", icon: "inventory_2" },
   { name: "Meja Kerja & Kursi", category: "kamar", icon: "desk" },
   { name: "Kipas Angin", category: "kamar", icon: "mode_fan" },
-  { name: "Peralatan Sholat Lengkap", category: "kamar", icon: "check_circle" },
+  { name: "Peralatan Sholat Lengkap", category: "kamar", icon: "mosque" },
   { name: "Balkon / Teras Pribadi", category: "kamar", icon: "balcony" },
-  { name: "Cermin Rias", category: "kamar", icon: "check_circle" },
+  { name: "Cermin Rias", category: "kamar", icon: "face_retouching_natural" },
 
   // Kamar Mandi
   { name: "Kamar Mandi Dalam", category: "kamar_mandi", icon: "shower" },
@@ -151,6 +151,8 @@ function getFallbackIcon(name: string): string {
   if (n.includes("kasur") || n.includes("bed")) return "bed";
   if (n.includes("meja") || n.includes("kerja")) return "desk";
   if (n.includes("lemari")) return "inventory_2";
+  if (n.includes("sholat") || n.includes("mushola") || n.includes("masjid")) return "mosque";
+  if (n.includes("cermin") || n.includes("rias") || n.includes("mirror")) return "face_retouching_natural";
   if (n.includes("cctv") || n.includes("keamanan")) return "security";
   if (n.includes("bale") || n.includes("pendopo") || n.includes("santai")) return "deck";
   return "check_circle";
@@ -428,19 +430,6 @@ export default function FacilitySelector({
         </div>
       )}
 
-      {/* Link ke Master Data Fasilitas */}
-      <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5 px-0.5">
-        <span>Fasilitas dikelola terpusat dari master data.</span>
-        <a
-          href="/admin/fasilitas"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#9f3c16] hover:text-[#7f2f11] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
-        >
-          <span>Buka Kelola Fasilitas</span>
-          <span className="material-symbols-outlined text-[13px]">open_in_new</span>
-        </a>
-      </div>
     </div>
   );
 }

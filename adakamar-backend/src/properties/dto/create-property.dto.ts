@@ -67,6 +67,10 @@ export class CreatePropertyDto {
   responseTime?: string;
 
   @IsOptional()
+  @IsString()
+  rules?: string;
+
+  @IsOptional()
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
 

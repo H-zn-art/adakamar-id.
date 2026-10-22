@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { propertiesApi, locationsApi, categoriesApi, facilitiesApi, articlesApi } from "@/lib/api";
 import FacilitySelector from "@/components/admin/FacilitySelector";
+import RuleSelector from "@/components/penginapan/RuleSelector";
 import {
   ChevronRight,
   Home,
@@ -107,7 +108,7 @@ function AddEditPenginapanContent() {
     category: "",
     tagline: "",
     description: "",
-    rules: "",
+    rules: [] as string[],
     bedrooms: 1,
     bathrooms: 1,
     guests: 2,
@@ -160,7 +161,7 @@ function AddEditPenginapanContent() {
             category: data.category?.name || "",
             tagline: "",
             description: data.description || "",
-            rules: data.rules || "",
+            rules: data.rules ? data.rules.split("\n").map((r: string) => r.trim()).filter(Boolean) : [],
             bedrooms: data.bedroomCount || 1,
             bathrooms: data.bathroomCount || 1,
             guests: data.capacity || 2,
@@ -274,7 +275,7 @@ function AddEditPenginapanContent() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || "Homestay asri bernuansa khas Yogyakarta dengan fasilitas lengkap.",
-        rules: formData.rules || undefined,
+        rules: formData.rules.length > 0 ? formData.rules.join("\n") : undefined,
         price: Number(formData.weekdayPrice) || 0,
         originalPrice: formData.weekendPrice ? Number(formData.weekendPrice) : undefined,
         address: formData.address || "Yogyakarta",
@@ -912,18 +913,14 @@ function AddEditPenginapanContent() {
                     />
                   </div>
 
+                  {/* Peraturan Penginapan */}
                   <div>
-                    <label className="text-xs font-bold text-zinc-800 block mb-1.5">
-                      Aturan Penginapan (opsional — satu aturan per baris)
-                    </label>
-                    <textarea
-                      rows={4}
-                      placeholder={`Contoh:\n- Dilarang merokok di dalam kamar\n- Check-in pukul 14.00, check-out pukul 12.00\n- Tidak diperkenankan membawa hewan peliharaan`}
-                      value={formData.rules}
-                      onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
-                      className="w-full p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#9f3c16]/20 focus:border-[#9f3c16] leading-relaxed resize-none transition-all"
+                    <RuleSelector
+                      selectedRules={formData.rules}
+                      onChange={(rules) => setFormData({ ...formData, rules })}
                     />
                   </div>
+
                 </div>
               </form>
 

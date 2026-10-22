@@ -188,10 +188,49 @@ function resolveFacilityIcon(name: string, rawIcon?: string): string {
   if (n.includes("kipas")) return "mode_fan";
   if (n.includes("lemari")) return "inventory_2";
   if (n.includes("balkon") || n.includes("teras")) return "balcony";
+  if (n.includes("sholat") || n.includes("mushola") || n.includes("masjid")) return "mosque";
+  if (n.includes("cermin") || n.includes("rias") || n.includes("mirror")) return "face_retouching_natural";
   if (n.includes("merokok") || n.includes("rokok")) return "smoke_free";
   if (n.includes("alam")) return "nature";
   return rawIcon || "check_circle";
 }
+
+/**
+ * Menentukan icon Material Symbol untuk setiap baris peraturan penginapan.
+ */
+function resolveRuleIcon(rule: string): string {
+  const r = rule.toLowerCase();
+  if (r.includes("check-in") || r.includes("checkin") || r.includes("masuk") || r.includes("tiba")) return "login";
+  if (r.includes("check-out") || r.includes("checkout") || r.includes("keluar") || r.includes("meninggalkan")) return "logout";
+  if (r.includes("rokok") || r.includes("merokok") || r.includes("smoke")) return "smoke_free";
+  if (r.includes("hewan") || r.includes("binatang") || r.includes("pet") || r.includes("anjing") || r.includes("kucing")) return "pets";
+  if (r.includes("pesta") || r.includes("party") || r.includes("keramaian")) return "celebration";
+  if (r.includes("alkohol") || r.includes("minuman keras") || r.includes("miras")) return "no_drinks";
+  if (r.includes("bising") || r.includes("berisik") || r.includes("kebisingan") || r.includes("musik") || r.includes("tenang")) return "volume_off";
+  if (r.includes("tamu") || r.includes("pengunjung") || r.includes("visitor")) return "group";
+  if (r.includes("parkir") || r.includes("kendaraan") || r.includes("mobil") || r.includes("motor")) return "local_parking";
+  if (r.includes("sampah") || r.includes("kebersihan") || r.includes("bersih")) return "delete_sweep";
+  if (r.includes("api") || r.includes("bakar") || r.includes("membakar")) return "local_fire_department";
+  if (r.includes("listrik") || r.includes("ac") || r.includes("lampu")) return "electrical_services";
+  if (r.includes("kunci") || r.includes("pintu") || r.includes("akses") || r.includes("gate")) return "lock";
+  if (r.includes("bayar") || r.includes("deposit") || r.includes("dp") || r.includes("pembayaran")) return "payments";
+  if (r.includes("identitas") || r.includes("ktp") || r.includes("passport") || r.includes("id")) return "badge";
+  if (r.includes("masak") || r.includes("dapur") || r.includes("memasak")) return "soup_kitchen";
+  if (r.includes("jam") || r.includes("malam") || r.includes("pagi") || r.includes("waktu")) return "schedule";
+  if (r.includes("barang") || r.includes("kerusakan") || r.includes("rusak")) return "handyman";
+  if (r.includes("wifi") || r.includes("internet")) return "wifi";
+  if (r.includes("cuci") || r.includes("laundry")) return "local_laundry_service";
+  return "check_circle";
+}
+
+const DEFAULT_RULES = [
+  "Check-in: mulai pukul 14.00 WIB",
+  "Check-out: sebelum pukul 12.00 WIB",
+  "Dilarang merokok di dalam kamar",
+  "Tidak diperbolehkan membawa hewan peliharaan",
+  "Harap jaga kebersihan area bersama",
+  "Tamu wajib menunjukkan identitas saat check-in",
+];
 
   // Fallback default image (only used when no images uploaded at all)
   const defaultImage = "/placeholder-homestay.jpg";
@@ -202,6 +241,11 @@ function resolveFacilityIcon(name: string, rawIcon?: string): string {
     icon: resolveFacilityIcon(f.name, f.icon),
     label: f.name,
   }));
+
+  // Parse rules — gunakan default jika kosong
+  const ruleLines = propertyRules
+    ? propertyRules.split("\n").map((r) => r.replace(/^[-•*\d.]+\s*/, "").trim()).filter(Boolean)
+    : DEFAULT_RULES;
 
   return (
     <>
@@ -782,62 +826,93 @@ function resolveFacilityIcon(name: string, rawIcon?: string): string {
               </div>
             )}
 
-            {/* Map placeholder */}
-            {/* Aturan Penginapan — PRD Seksi 7 */}
-            {propertyRules && (
-              <div
-                style={{ paddingTop: "24px", borderTop: "1px solid #e8e7f1", marginBottom: "32px" }}
+            {/* ─── Aturan Penginapan — Mamikost Style ─── */}
+            <div
+              style={{ paddingTop: "28px", borderTop: "1px solid #e8e7f1", marginBottom: "32px" }}
+            >
+              <h2
+                style={{
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  color: "#1a1b22",
+                  marginBottom: "4px",
+                  letterSpacing: "-0.01em",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
               >
-                <h2
-                  style={{
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    color: "#1a1b22",
-                    marginBottom: "16px",
-                    letterSpacing: "-0.01em",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ color: "#9f3c16", fontSize: "22px" }}>
-                    rule
-                  </span>
-                  Aturan Penginapan
-                </h2>
-                <div
-                  style={{
-                    background: "#FDF6F3",
-                    border: "1px solid #F3D5CA",
-                    borderRadius: "16px",
-                    padding: "20px 24px",
-                  }}
-                >
-                  {propertyRules.split("\n").filter(Boolean).map((rule, idx) => (
+                <span className="material-symbols-outlined" style={{ color: "#9f3c16", fontSize: "22px" }}>
+                  rule
+                </span>
+                Aturan Penginapan
+              </h2>
+              <p style={{ fontSize: "13px", color: "#8a726a", marginBottom: "16px" }}>
+                Harap patuhi aturan berikut selama menginap
+              </p>
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #FDF6F3 0%, #fff8f5 100%)",
+                  border: "1px solid #F3D5CA",
+                  borderRadius: "20px",
+                  padding: "20px 24px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                  gap: "10px",
+                }}
+              >
+                {ruleLines.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "10px",
+                      background: "#fff",
+                      border: "1px solid #f0e4df",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                    }}
+                  >
                     <div
-                      key={idx}
                       style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "8px",
+                        background: "#ffdbcf",
                         display: "flex",
-                        alignItems: "flex-start",
-                        gap: "10px",
-                        fontSize: "14px",
-                        color: "#57423b",
-                        lineHeight: 1.6,
-                        marginBottom: idx < propertyRules.split("\n").filter(Boolean).length - 1 ? "10px" : 0,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
                       <span
                         className="material-symbols-outlined"
-                        style={{ color: "#9f3c16", fontSize: "16px", marginTop: "2px", flexShrink: 0 }}
+                        style={{ color: "#9f3c16", fontSize: "16px" }}
                       >
-                        arrow_right
+                        {resolveRuleIcon(rule)}
                       </span>
-                      <span>{rule.replace(/^[-•*]\s*/, "").trim()}</span>
                     </div>
-                  ))}
-                </div>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        color: "#3d2b25",
+                        lineHeight: 1.5,
+                        fontWeight: 500,
+                        paddingTop: "6px",
+                      }}
+                    >
+                      {rule}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
+              {!propertyRules && (
+                <p style={{ fontSize: "11px", color: "#b8a09a", marginTop: "10px", textAlign: "center" }}>
+                  * Aturan standar — hubungi host untuk detail spesifik
+                </p>
+              )}
+            </div>
 
             <div
               id="peta-lokasi"

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { propertiesApi, locationsApi, categoriesApi, facilitiesApi, articlesApi, roomTypesApi } from "@/lib/api";
 import FacilitySelector from "@/components/admin/FacilitySelector";
+import RuleSelector from "@/components/penginapan/RuleSelector";
 import {
   Plus,
   Download,
@@ -70,7 +71,7 @@ export default function AdminPenginapanPage() {
     bathroomCount: 1,
     whatsappNumber: "6285795445463",
     description: "",
-    rules: "",
+    rules: [] as string[],
     status: "ACTIVE" as "ACTIVE" | "INACTIVE",
     isFeatured: false,
     facilityIds: [] as string[],
@@ -335,7 +336,7 @@ export default function AdminPenginapanPage() {
         bathroomCount: fullData.bathroomCount || 1,
         whatsappNumber: fullData.whatsappNumber || "6285795445463",
         description: fullData.description || "",
-        rules: fullData.rules || "",
+        rules: fullData.rules ? fullData.rules.split("\n").map((r: string) => r.trim()).filter(Boolean) : [],
         status: fullData.status || "ACTIVE",
         isFeatured: Boolean(fullData.isFeatured),
         facilityIds: Array.isArray(fullData.facilities)
@@ -363,7 +364,7 @@ export default function AdminPenginapanPage() {
         bathroomCount: 1,
         whatsappNumber: "6285795445463",
         description: "",
-        rules: "",
+        rules: [] as string[],
         status: item.status === "active" ? "ACTIVE" : "INACTIVE",
         isFeatured: Boolean(item.featured),
         facilityIds: [],
@@ -391,7 +392,7 @@ export default function AdminPenginapanPage() {
       const payload = {
         name: formProp.name.trim(),
         description: formProp.description.trim() || "Homestay asri bernuansa khas Yogyakarta dengan fasilitas lengkap.",
-        rules: formProp.rules.trim() || undefined,
+        rules: formProp.rules.length > 0 ? formProp.rules.join("\n") : undefined,
         price: Number(formProp.price) || 500000,
         originalPrice: formProp.originalPrice ? Number(formProp.originalPrice) : undefined,
         address: formProp.address.trim() || "Yogyakarta",
@@ -1004,31 +1005,33 @@ export default function AdminPenginapanPage() {
               </div>
 
               {/* Bagian 3: Fasilitas, Narasi & Foto */}
-              <div className="p-5 rounded-2xl bg-zinc-50/60 border border-zinc-200/60 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-200/50">
-                  <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    Fasilitas, Kontak & Media Foto
-                  </span>
-                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
+              <div className="p-5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#ffdbcf] text-[#9f3c16] flex items-center justify-center">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-zinc-900 text-sm leading-tight">Fasilitas & Amenitas</p>
+                      <p className="text-[11px] text-zinc-400 leading-tight">Pilih fasilitas yang tersedia di homestay</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold bg-zinc-100 px-2.5 py-1 rounded-full text-zinc-500 border border-zinc-200/60 uppercase tracking-wider">
                     Langkah 3/4
                   </span>
                 </div>
 
                 {/* Fasilitas Unit — Gaya Mamikos Simpel & Hemat Frame */}
-                <div>
-                  <FacilitySelector
-                    availableFacilities={availableFacilities}
-                    selectedValues={formProp.facilityIds}
-                    onChange={(newIds) => setFormProp({ ...formProp, facilityIds: newIds })}
-                    valueType="id"
-                    label="Fasilitas Unit"
-                    description="Pilih fasilitas yang tersedia di homestay (tampilan ringkas &amp; hemat frame)"
-                    placeholderSearch="Cari fasilitas homestay (AC, WiFi, Kolam Renang)..."
-                    size="compact"
-                    allowCustom={false}
-                  />
-                </div>
+                <FacilitySelector
+                  availableFacilities={availableFacilities}
+                  selectedValues={formProp.facilityIds}
+                  onChange={(newIds) => setFormProp({ ...formProp, facilityIds: newIds })}
+                  valueType="id"
+                  label=""
+                  placeholderSearch="Cari fasilitas homestay (AC, WiFi, Kolam Renang)..."
+                  size="compact"
+                  allowCustom={false}
+                />
 
                 {/* ─── Foto Utama Homestay ─── */}
                 <div className="space-y-2">
@@ -1213,21 +1216,14 @@ export default function AdminPenginapanPage() {
                   </div>
                 </div>
 
-                {/* PRD Seksi 7: Aturan Penginapan */}
+                {/* Peraturan Penginapan */}
                 <div>
-                  <label className="font-semibold text-zinc-800 block mb-1">
-                    Aturan Penginapan
-                    <span className="ml-1.5 text-zinc-400 font-normal text-[11px]">(opsional — satu aturan per baris)</span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder={`Contoh:\n- Dilarang merokok\n- Check-in 14.00, check-out 12.00\n- Tamu sesuai kapasitas`}
-                    value={formProp.rules}
-                    onChange={(e) => setFormProp({ ...formProp, rules: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-zinc-300 text-xs text-zinc-900 focus:outline-none resize-none"
+                  <RuleSelector
+                    selectedRules={formProp.rules}
+                    onChange={(rules) => setFormProp({ ...formProp, rules })}
                   />
-                  <p className="text-[11px] text-zinc-400 mt-1">Ditampilkan di halaman detail penginapan untuk tamu.</p>
                 </div>
+
 
                 <div>
                   <label className="font-semibold text-zinc-800 block mb-1">
@@ -1374,14 +1370,22 @@ export default function AdminPenginapanPage() {
                         </div>
 
                         {/* Fasilitas Kamar — Gaya Mamikos Simpel & Hemat Frame */}
-                        <div>
+                        <div className="p-4 rounded-2xl bg-white border border-zinc-200/80 shadow-xs">
+                          <div className="flex items-center gap-2 pb-2.5 mb-3 border-b border-zinc-100">
+                            <div className="w-6 h-6 rounded-lg bg-[#ffdbcf] text-[#9f3c16] flex items-center justify-center">
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-zinc-800 text-xs leading-tight">Fasilitas Kamar</p>
+                              <p className="text-[10px] text-zinc-400 leading-tight">Pilih fasilitas spesifik tipe kamar ini</p>
+                            </div>
+                          </div>
                           <FacilitySelector
                             availableFacilities={availableFacilities}
                             selectedValues={room.facilityNames}
                             onChange={(newNames) => updateRoomTypeRow(idx, "facilityNames", newNames)}
                             valueType="name"
-                            label="Fasilitas Kamar"
-                            description="Pilih fasilitas spesifik tipe kamar ini"
+                            label=""
                             placeholderSearch="Cari fasilitas kamar..."
                             size="compact"
                             allowCustom={false}

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import {
   Sparkles,
   LayoutDashboard,
   Home,
-  Waves,
   MapPin,
   BedDouble,
   FileText,
@@ -22,6 +21,7 @@ import {
   LogOut,
   LucideIcon,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 
 interface NavItem {
@@ -35,8 +35,10 @@ interface NavSection {
   items: NavItem[];
 }
 
-export default function AdminSidebar() {
+function AdminSidebarInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
   const router = useRouter();
   const [userName, setUserName] = useState("Raditya Danu");
   const [userRole, setUserRole] = useState("Administrator");
@@ -72,7 +74,7 @@ export default function AdminSidebar() {
       items: [
         { label: "Penginapan", href: "/admin/penginapan", icon: Home },
         { label: "Kategori Properti", href: "/admin/properti/kategori", icon: FolderTree },
-        { label: "Fasilitas Kamar", href: "/admin/fasilitas", icon: Waves },
+        { label: "Fasilitas & Peraturan", href: "/admin/fasilitas", icon: ClipboardList },
         { label: "Lokasi & Peta Jogja", href: "/admin/lokasi", icon: MapPin },
         { label: "Promo & Kupon", href: "/admin/promo", icon: Percent },
         { label: "Kelola Tipe Kamar", href: "/admin/kamar", icon: BedDouble },
@@ -142,6 +144,8 @@ export default function AdminSidebar() {
                     ? pathname === "/admin/penginapan" || (pathname.startsWith("/admin/penginapan") && !pathname.includes("/kamar"))
                     : item.href === "/admin/kamar"
                     ? pathname === "/admin/kamar" || pathname.includes("/admin/penginapan/") && pathname.endsWith("/kamar")
+                    : item.href === "/admin/fasilitas"
+                    ? pathname === "/admin/fasilitas"
                     : pathname.startsWith(item.href);
 
                 const Icon = item.icon;
@@ -212,5 +216,15 @@ export default function AdminSidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+export default function AdminSidebar() {
+  return (
+    <Suspense fallback={
+      <aside className="fixed left-0 top-0 h-full w-64 bg-zinc-950 border-r border-white/10" />
+    }>
+      <AdminSidebarInner />
+    </Suspense>
   );
 }
